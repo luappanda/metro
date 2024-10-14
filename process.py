@@ -2,8 +2,8 @@ import os
 import geopandas as gpd
 
 #Get a GeoDataFrame of the grid
-grid_gdf = gpd.read_file("GISFiles/Mini_grid.gpkg")
-water_gdf = gpd.read_file("GISFiles/Mini_water.gpkg")
+grid_gdf = gpd.read_file("GISFiles/Countygrid.gpkg")
+water_gdf = gpd.read_file("GISFiles/water.gpkg")
 if grid_gdf.crs != water_gdf.crs:
     water_gdf = water_gdf.to_crs(grid_gdf.crs)
 
@@ -15,9 +15,6 @@ intersection_gdf = gpd.overlay(grid_gdf, water_gdf, how="intersection")
 # Calculate the area of the intersected geometries
 intersection_gdf['water_area'] = intersection_gdf.geometry.area
 
-
-# Optional: group by grid ID if you want the total water area per grid cell
-# This assumes the grid cells have an ID column like 'grid_id'
 water_area_per_grid = intersection_gdf.groupby('id')['water_area'].sum().reset_index()
 
 grid_gdf = grid_gdf.merge(water_area_per_grid, on="id", how="left")
@@ -35,11 +32,10 @@ grid_gdf['water_percentage'] = (grid_gdf['water_area'] / grid_area) * 100
 grid_gdf['CONTAINS_WATER'] = (grid_gdf['water_percentage'] > threshold).astype(int)
 print(grid_gdf)
 
-print("DONE PROCESSING")
 # Create a output path for the data
-output_fp = os.getcwd() + "/GISFiles/mini_grid_proc.gpkg"
-# output2_fp = os.getcwd() + "/GISFiles/mini_intersection.gpkg"
+output_fp = os.getcwd() + "/GISFiles/grid_proc.gpkg"
 
 # Write the file
 grid_gdf.to_file(output_fp, driver="GPKG")
-# intersection_gdf.to_file(output2_fp, driver="GPKG")
+
+print("DONE PROCESSING")

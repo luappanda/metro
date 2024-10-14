@@ -2,7 +2,7 @@ import os
 import geopandas as gpd
 
 #Get a GeoDataFrame of the grid
-grid_gdf = gpd.read_file("GISFiles/Countygrid.gpkg")
+grid_gdf = gpd.read_file("GISFiles/CountyGrid.gpkg")
 water_gdf = gpd.read_file("GISFiles/water.gpkg")
 if grid_gdf.crs != water_gdf.crs:
     water_gdf = water_gdf.to_crs(grid_gdf.crs)

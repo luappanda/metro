@@ -20,7 +20,9 @@ grid_gdf.loc[station_indices, 'CONTAINS_STATION'] = 1
 
 # Create buffers around station locations (e.g., radius of 2 grid blocks)
 # You may need to adjust the distance based on the coordinate reference system
-buffer_distance = 600  # adjust this as necessary based on your grid's units
+buffer_distance = 4800  # adjust this as necessary based on your grid's units
+# 1800 for walking is good
+# 4800 for biking
 stations_gdf['geometry'] = stations_gdf.geometry.buffer(buffer_distance)
 
 # Perform spatial join with the buffered geometries

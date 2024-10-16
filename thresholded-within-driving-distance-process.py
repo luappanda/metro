@@ -13,10 +13,10 @@ grid_gdf['IS_FEASIBLE'] = 0
 
 # Define the radius of the catchment area (in the same units as the CRS, likely meters)
 # Assuming a 5 minute driving time is the maximum, and the car travels at an average speed of 40 mph = about 5000 meters
-catchment_radius = 3000  # Example: 5 km (R_p)
+catchment_radius = 5000  # Example: 5 km (R_p)
 
 # Pre-specified threshold number of people (P_p)
-population_threshold = 20000
+population_threshold = 35000
 
 # Get the centroids of population blocks (to represent the block location)
 population_gdf['centroid'] = population_gdf.geometry.centroid

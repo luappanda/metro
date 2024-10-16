@@ -13,10 +13,10 @@ grid_gdf['IS_FEASIBLE'] = 0
 
 # Define the radius of the catchment area (in the same units as the CRS, likely meters)
 # Assuming a 5 minute driving time is the maximum, and the car travels at an average speed of 40 mph = about 5000 meters
-catchment_radius = 5000  # Example: 5 km (R_p)
+catchment_radius = 1800  # Example: 5 km (R_p)
 
 # Pre-specified threshold number of people (P_p)
-population_threshold = 35000
+population_threshold = 3000
 
 # Get the centroids of population blocks (to represent the block location)
 population_gdf['centroid'] = population_gdf.geometry.centroid
@@ -40,7 +40,7 @@ for i, grid_row in grid_gdf.iterrows():
         grid_gdf.at[i, 'IS_FEASIBLE'] = 1
 
 # Create an output path for the data
-output_fp = "C:/Users/Paul/Documents/metro project/thresholded driving distance grid.gpkg"
+output_fp = "C:/Users/Paul/Documents/metro project/thresholded walking distance grid.gpkg"
 
 # Write the updated grid GeoDataFrame to file
 grid_gdf.to_file(output_fp, driver="GPKG")

@@ -2,7 +2,7 @@ import geopandas as gpd
 import numpy as np
 
 # Read grid and population GeoDataFrames
-grid_gdf = gpd.read_file("C:/Users/Paul/Documents/metro project/thresholded driving distance grid.gpkg")
+grid_gdf = gpd.read_file("C:/Users/Paul/Documents/metro project/thresholded walking distance grid.gpkg")
 
 grid_gdf['WEIGHTED_FEASIBILITY'] = 0
 
@@ -34,7 +34,7 @@ for i, grid_row in grid_gdf.iterrows():
         grid_gdf.at[i, 'WEIGHTED_FEASIBILITY'] = weight
 
 # Create an output path for the data
-output_fp = "C:/Users/Paul/Documents/metro project/weighted thresholded driving distance grid.gpkg"
+output_fp = "C:/Users/Paul/Documents/metro project/weighted thresholded walking distance grid.gpkg"
 
 # Write the updated grid GeoDataFrame to file
 grid_gdf.to_file(output_fp, driver="GPKG")

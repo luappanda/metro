@@ -2,8 +2,8 @@ import os
 import geopandas as gpd
 
 #Get a GeoDataFrame of the grid
-grid_gdf = gpd.read_file("GISFiles/CountyGrid.gpkg")
-water_gdf = gpd.read_file("GISFiles/water.gpkg")
+grid_gdf = gpd.read_file("C:/Users/kavan_3rgiqdq/Documents/metro project/CountyGrid.gpkg")
+water_gdf = gpd.read_file("C:/Users/kavan_3rgiqdq/Documents/metro project/water.gpkg")
 if grid_gdf.crs != water_gdf.crs:
     water_gdf = water_gdf.to_crs(grid_gdf.crs)
 
@@ -33,7 +33,7 @@ grid_gdf['CONTAINS_WATER'] = (grid_gdf['water_percentage'] > threshold).astype(i
 print(grid_gdf)
 
 # Create a output path for the data
-output_fp = os.getcwd() + "/GISFiles/grid_proc.gpkg"
+output_fp = "C:/Users/kavan_3rgiqdq/Documents/metro project/watergrid.gpkg"
 
 # Write the file
 grid_gdf.to_file(output_fp, driver="GPKG")

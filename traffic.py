@@ -1,8 +1,8 @@
 import geopandas as gpd
 
 # Step 1: Load AADT polyline features and grids (replace with your actual file paths)
-traffic_gdf = gpd.read_file('C:/Users/kavan_3rgiqdq/Documents/metro project/clipped traffic.gpkg')  # Annual Average Daily Traffic data as polylines
-grid_gdf = gpd.read_file('C:/Users/kavan_3rgiqdq/Documents/metro project/CountyGrid.gpkg')  # Grid data
+traffic_gdf = gpd.read_file('C:/Users/Paul/Documents/metro project/clipped traffic.gpkg')  # Annual Average Daily Traffic data as polylines
+grid_gdf = gpd.read_file('C:/Users/Paul/Documents/metro project/county grid.gpkg')  # Grid data
 
 # Ensure both datasets have the same CRS
 if grid_gdf.crs != traffic_gdf.crs:
@@ -29,7 +29,7 @@ buffer_distance = 1000  # Adjust this as necessary based on the coordinate refer
 feasible_gdf.loc[:, 'geometry'] = feasible_gdf.geometry.buffer(buffer_distance)
 
 # Perform spatial join with the buffered geometries
-buffered_intersection_gdf = gpd.sjoin(filtered_gdf, feasible_gdf, how="left", predicate="intersects")
+buffered_intersection_gdf = gpd.sjoin(feasible_gdf, filtered_gdf, how="left", predicate="intersects")
 
 # Get unique indices of grid blocks that are within the buffer
 buffered_station_indices = buffered_intersection_gdf[buffered_intersection_gdf['index_right'].notnull()].index.unique()
@@ -38,7 +38,7 @@ buffered_station_indices = buffered_intersection_gdf[buffered_intersection_gdf['
 grid_gdf.loc[buffered_station_indices, 'IS_FEASIBLE'] = 1
 
 # Create an output path for the data
-output_fp = "C:/Users/kavan_3rgiqdq/Documents/metro project/traffic grid.gpkg"
+output_fp = "C:/Users/Paul/Documents/metro project/traffic grid.gpkg"
 
 # Write the result to a file
 grid_gdf.to_file(output_fp, driver="GPKG")

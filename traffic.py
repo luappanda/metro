@@ -1,38 +1,32 @@
 import geopandas as gpd
 
-# Get a GeoDataFrame of the grid and traffic
-grid_gdf = gpd.read_file("C:/Users/kavan_3rgiqdq/Documents/metro project/CountyGrid.gpkg")
-traffic_gdf = gpd.read_file("C:/Users/kavan_3rgiqdq/Documents/metro project/clipped traffic.gpkg")
-
-# Ensure both GeoDataFrames have the same CRS
+# Step 1: Load AADT polyline features and grids (replace with your actual file paths)
+traffic_gdf = gpd.read_file('C:/Users/kavan_3rgiqdq/Documents/metro project/clipped traffic.gpkg')  # Annual Average Daily Traffic data as polylines
+grid_gdf = gpd.read_file('C:/Users/kavan_3rgiqdq/Documents/metro project/CountyGrid.gpkg')  # Grid data
 if grid_gdf.crs != traffic_gdf.crs:
     traffic_gdf = traffic_gdf.to_crs(grid_gdf.crs)
-    
-# Filter traffic data based on user input for AADT
-# Assume the AADT values are stored in a column named 'AADT'
-user_input_aadt_threshold = 10000  # Replace this with user input as needed
-filtered_traffic_gdf = traffic_gdf[traffic_gdf['year_2023'] > user_input_aadt_threshold]
 
-# Initialize a field to indicate grid feasibility (1 = feasible, 0 = not feasible)
-grid_gdf['FEASIBLE'] = 1  # Assume all grid blocks are feasible initially
+# Step 2: Filter AADT features based on user input threshold
+user_input_threshold = 10000  # Replace with actual user input value
+filtered_gdf = traffic_gdf[traffic_gdf['AADT'] > user_input_threshold]
 
-# Define a buffer radius for the grid blocks (e.g., RA)
-buffer_radius = 1800  # Replace this with the desired buffer radius based on your grid's CRS
+# Step 3: Create buffer area around each grid cell
+buffer_radius = 500  # Replace with actual buffer radius (in the same units as your grid)
+grid_gdf['buffer_area'] = grid_gdf.geometry.buffer(buffer_radius)
 
-# Create buffers around each grid block
-grid_gdf['geometry'] = grid_gdf.geometry.buffer(buffer_radius)
+# Step 4: Identify grids that are far away from AADT features
+def check_intersection(grid_gdf, traffic_gdf):
+    # Check if the grid buffer intersects with any AADT feature
+    return grid_gdf.intersects(traffic_gdf.unary_union)
 
-# Perform a spatial join to find intersections between the buffered grid blocks and filtered traffic features
-intersection_gdf = gpd.sjoin(grid_gdf, filtered_traffic_gdf, how="left", predicate="intersects")
+# Apply the check to each grid's buffer
+grid_gdf['far_from_aadt'] = grid_gdf['buffer_area'].apply(lambda buf: not check_intersection(buf, filtered_gdf))
 
-# Identify grid blocks that intersect with busy roads (AADT above the threshold)
-intersected_grid_indices = intersection_gdf[intersection_gdf['index_right'].notnull()].index.unique()
+# Step 5: Set S_p^i = 0 for grids far from AADT features
+grid_gdf['S_p_i'] = grid_gdf['far_from_aadt'].apply(lambda x: 0 if x else 1)
 
-# Mark these grid blocks as not feasible (0)
-grid_gdf.loc[intersected_grid_indices, 'FEASIBLE'] = 0
+# Create a output path for the data
+output_fp = "C:/Users/kavan_3rgiqdq/Documents/metro project/traffic grid.gpkg"
 
-# Create an output path for the processed grid data
-output_fp = "C:/Users/kavan_3rgiqdq/Documents/metro project/grid_traffic_feasibility.gpkg"
-
-# Write the updated grid GeoDataFrame to file
+# Write the file
 grid_gdf.to_file(output_fp, driver="GPKG")

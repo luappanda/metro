@@ -1,24 +1,34 @@
 import geopandas as gpd
+import matplotlib.pyplot as plt
 
 # Read grid and population GeoDataFrames
 blocks_gdf = gpd.read_file("C:/Users/Paul/Documents/metro project/block population.gpkg")
-jobs_gdf = gpd.read_file("C:/Users/Paul/Documents/metro project/jobs.gpkg")
+jobs_gdf = gpd.read_file("C:/Users/Paul/Documents/metro project/jobss.gpkg")
 
-# Ensure both GeoDataFrames have the same CRS
-if blocks_gdf.crs != jobs_gdf.crs:
-    jobs_gdf = jobs_gdf.to_crs(blocks_gdf.crs)
+# Reproject to a projected CRS for Arkansas (EPSG:26915)
+projected_crs = "EPSG:26915"
+blocks_gdf = blocks_gdf.to_crs(projected_crs)
+jobs_gdf = jobs_gdf.to_crs(projected_crs)
 
 # Initialize field to indicate which grid blocks are feasible
 blocks_gdf['JOBS18'] = 0
 
-intersection_gdf = gpd.sjoin(blocks_gdf, jobs_gdf, how="left", predicate="intersects")
+# Get the centroids of job locations (to represent the job location)
+jobs_centroids_gdf = gpd.GeoDataFrame(jobs_gdf.copy(), geometry=jobs_gdf.centroid, crs=projected_crs)
 
-# Filter out rows from intersection_gdf where 'index_right' is not null (meaning water is intersecting)
-# Get the unique indices from the grid_gdf where water is present
-water_indices = intersection_gdf[intersection_gdf['index_right'].notnull()].index.unique()
+# Loop through each grid block and calculate the total jobs within it
+for i, grid_row in blocks_gdf.iterrows():
+    grid_gdf = gpd.GeoDataFrame([grid_row], crs=blocks_gdf.crs)
 
-# Set 'CONTAINS_WATER' to 1 for rows in grid_gdf that have an index in water_indices
-grid_gdf.loc[water_indices, 'CONTAINS_WATER'] = 1
+    # Perform the spatial join
+    intersection_gdf = gpd.sjoin(grid_gdf, jobs_centroids_gdf, how="left", predicate="intersects")
+
+    # Filter jobs within the current block
+    jobs_indices = intersection_gdf[intersection_gdf['index_right'].notnull()]['index_right'].unique()
+    within_block = jobs_gdf.loc[jobs_indices]
+
+    # Sum the jobs in the current block
+    blocks_gdf.at[i, 'JOBS18'] = within_block['c000'].sum()
 
 # Create an output path for the data
 output_fp = "C:/Users/Paul/Documents/metro project/jobs per census block.gpkg"

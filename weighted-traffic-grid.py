@@ -17,6 +17,9 @@ for i, grid_row in grid_gdf.iterrows():
     if grid_row['IS_FEASIBLE'] == 1:
         # If the block is already feasible, assign max weight (e.g., 1)
         grid_gdf.at[i, 'WEIGHTED_FEASIBILITY'] = 1
+    elif grid_row['IS_FEASIBLE'] == 2:
+        # If the block is not feasible, assign 0
+        grid_gdf.at[i, 'WEIGHTED_FEASIBILITY'] = 0
     else:
         # If the block is not feasible, calculate the distance to the nearest feasible block
         grid_center = grid_row.geometry.centroid

@@ -17,6 +17,7 @@ grid_gdf['IS_FEASIBLE'] = 0
 
 # Perform spatial join to find intersections
 intersection_gdf = gpd.sjoin(grid_gdf, filtered_gdf, how="left", predicate="intersects")
+intersection_indices = intersection_gdf[intersection_gdf['index_right'].notnull()].index.unique()
 
 # Get grid cells that do not intersect traffic
 feasible_gdf = intersection_gdf[intersection_gdf['index_right'].isnull()]
@@ -32,10 +33,11 @@ feasible_gdf.loc[:, 'geometry'] = feasible_gdf.geometry.buffer(buffer_distance)
 buffered_intersection_gdf = gpd.sjoin(feasible_gdf, filtered_gdf, how="left", predicate="intersects")
 
 # Get unique indices of grid blocks that are within the buffer
-buffered_station_indices = buffered_intersection_gdf[buffered_intersection_gdf['index_right'].notnull()].index.unique()
+buffered_traffic_indices = buffered_intersection_gdf[buffered_intersection_gdf['index_right'].notnull()].index.unique()
 
 # Mark feasible grid blocks in the original grid_gdf
-grid_gdf.loc[buffered_station_indices, 'IS_FEASIBLE'] = 1
+grid_gdf.loc[buffered_traffic_indices, 'IS_FEASIBLE'] = 1
+grid_gdf.loc[intersection_indices, 'IS_FEASIBLE'] = 2
 
 # Create an output path for the data
 output_fp = "C:/Users/Paul/Documents/metro project/traffic grid.gpkg"

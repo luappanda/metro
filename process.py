@@ -1,39 +1,38 @@
 import geopandas as gpd
 
-# Read grid and population GeoDataFrames
-grid_gdf = gpd.read_file("C:/Users/Paul/Documents/metro project/thresholded jobs grid.gpkg")
+# Load the grid files
+jobs_gdf = gpd.read_file("C:/Users/Paul/Documents/metro project/weighted thresholded jobs grid.gpkg")
+traffic_gdf = gpd.read_file("C:/Users/Paul/Documents/metro project/weighted traffic grid.gpkg")
+grid_gdf = gpd.read_file("C:/Users/Paul/Documents/metro project/county grid.gpkg")
 
-grid_gdf['WEIGHTED_FEASIBILITY'] = 0
+# Rename columns for clarity
+jobs_gdf = jobs_gdf.rename(columns={'WEIGHTED_FEASIBILITY': 'JOBS_FEASIBILITY'})
+traffic_gdf = traffic_gdf.rename(columns={'WEIGHTED_FEASIBILITY': 'TRAFFIC_FEASIBILITY'})
 
-# Define decay function parameters
-decay_constant = 100  # Decay constant for how fast feasibility fades, adjust based on the scale of your grid
+# Merge by geometry
+combined_gdf = grid_gdf.merge(
+    jobs_gdf[['geometry', 'JOBS_FEASIBILITY']], on='geometry', how='left'
+).merge(
+    traffic_gdf[['geometry', 'TRAFFIC_FEASIBILITY']], on='geometry', how='left'
+)
 
-# Get feasible blocks (where IS_FEASIBLE == 1)
-feasible_blocks = grid_gdf[grid_gdf['IS_FEASIBLE'] == 1]
+# Fill NaNs with 0 for missing feasibility values
+combined_gdf['JOBS_FEASIBILITY'] = combined_gdf['JOBS_FEASIBILITY'].fillna(0)
+combined_gdf['TRAFFIC_FEASIBILITY'] = combined_gdf['TRAFFIC_FEASIBILITY'].fillna(0)
 
-# Loop through each grid block
-for i, grid_row in grid_gdf.iterrows():
-    if grid_row['IS_FEASIBLE'] == 1:
-        # If the block is already feasible, assign max weight (e.g., 1)
-        grid_gdf.at[i, 'WEIGHTED_FEASIBILITY'] = 1
+# Initialize the TOTAL WEIGHTED FEASIBILITY column
+combined_gdf['TOTAL WEIGHTED FEASIBILITY'] = 0
+
+# Calculate total feasibility with plain Python logic
+for idx, row in combined_gdf.iterrows():
+    if row['JOBS_FEASIBILITY'] == 0 or row['TRAFFIC_FEASIBILITY'] == 0:
+        combined_gdf.at[idx, 'TOTAL WEIGHTED FEASIBILITY'] = 0
     else:
-        # If the block is not feasible, calculate the distance to the nearest feasible block
-        grid_center = grid_row.geometry.centroid
-        
-        # Calculate the distance to each feasible block's centroid
-        feasible_blocks['distance'] = feasible_blocks.geometry.centroid.distance(grid_center)
-        
-        # Find the minimum distance to any feasible block
-        min_distance = feasible_blocks['distance'].min()
-        
-        # Apply the decay function to calculate the weight based on distance
-        weight = np.exp(-min_distance / decay_constant)
-        
-        # Assign the calculated weight to the grid block
-        grid_gdf.at[i, 'WEIGHTED_FEASIBILITY'] = weight
+        combined_gdf.at[idx, 'TOTAL WEIGHTED FEASIBILITY'] = (row['JOBS_FEASIBILITY'] + row['TRAFFIC_FEASIBILITY']) / 2
 
-# Create an output path for the data
-output_fp = "C:/Users/Paul/Documents/metro project/weighted thresholded jobs grid.gpkg"
+# Update the original grid with the combined feasibility values
+grid_gdf['TOTAL WEIGHTED FEASIBILITY'] = combined_gdf['TOTAL WEIGHTED FEASIBILITY']
 
-# Write the updated grid GeoDataFrame to file
+# Save the result to a new file
+output_fp = "C:/Users/Paul/Documents/metro project/weighted grid.gpkg"
 grid_gdf.to_file(output_fp, driver="GPKG")

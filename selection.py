@@ -7,7 +7,7 @@ grid_gdf = gpd.read_file("GISFiles/grid_proc.gpkg")
 
 viable_grids = grid_gdf[grid_gdf["CONTAINS_WATER"] == False]
 
-selected_grids = viable_grids.sample(n=20)
+selected_grids = viable_grids.sample(n=7)
 
 # Create a output path for the data
 output_fp = os.getcwd() + "/GISFiles/selection.gpkg"

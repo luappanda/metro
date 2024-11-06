@@ -2,37 +2,56 @@ import geopandas as gpd
 
 # Load the grid files
 jobs_gdf = gpd.read_file("C:/Users/Paul/Documents/metro project/weighted thresholded jobs grid.gpkg")
-population_gdf = gpd.read_file("C:/Users/Paul/Documents/metro project/c:\Users\Paul\Documents\metro project\weighted thresholded walking distance grid.gpkg")
+population_gdf = gpd.read_file("C:/Users/Paul/Documents/metro project/weighted thresholded walking distance grid.gpkg")
 traffic_gdf = gpd.read_file("C:/Users/Paul/Documents/metro project/weighted traffic grid.gpkg")
-water_gdf = gpd.read_file("C:/Users/Paul/Documents/metro project/water.gpkg")
-bus_gdf = gpd.read_file("C:/Users/Paul/Documents/metro project/water.gpkg")
+water_gdf = gpd.read_file("C:/Users/Paul/Documents/metro project/water clipped.gpkg")
+bus_gdf = gpd.read_file("C:/Users/Paul/Documents/metro project/weighted bus station grid.gpkg")
 
 grid_gdf = gpd.read_file("C:/Users/Paul/Documents/metro project/county grid.gpkg")
 
 # Rename columns for clarity
 jobs_gdf = jobs_gdf.rename(columns={'WEIGHTED_FEASIBILITY': 'JOBS_FEASIBILITY'})
+population_gdf = population_gdf.rename(columns={'WEIGHTED_FEASIBILITY': 'POPULATION_FEASIBILITY'})
 traffic_gdf = traffic_gdf.rename(columns={'WEIGHTED_FEASIBILITY': 'TRAFFIC_FEASIBILITY'})
+water_gdf = water_gdf.rename(columns={'IS_FEASIBLE': 'WATER_FEASIBILITY'})
+bus_gdf = bus_gdf.rename(columns={'WEIGHTED_FEASIBILITY': 'BUS_FEASIBILITY'})
 
-# Merge by geometry
+# Merge all feasibility columns with the grid, based on geometry
 combined_gdf = grid_gdf.merge(
     jobs_gdf[['geometry', 'JOBS_FEASIBILITY']], on='geometry', how='left'
 ).merge(
+    population_gdf[['geometry', 'POPULATION_FEASIBILITY']], on='geometry', how='left'
+).merge(
     traffic_gdf[['geometry', 'TRAFFIC_FEASIBILITY']], on='geometry', how='left'
+).merge(
+    water_gdf[['geometry', 'WATER_FEASIBILITY']], on='geometry', how='left'
+).merge(
+    bus_gdf[['geometry', 'BUS_FEASIBILITY']], on='geometry', how='left'
 )
 
 # Fill NaNs with 0 for missing feasibility values
 combined_gdf['JOBS_FEASIBILITY'] = combined_gdf['JOBS_FEASIBILITY'].fillna(0)
+combined_gdf['POPULATION_FEASIBILITY'] = combined_gdf['POPULATION_FEASIBILITY'].fillna(0)
 combined_gdf['TRAFFIC_FEASIBILITY'] = combined_gdf['TRAFFIC_FEASIBILITY'].fillna(0)
+combined_gdf['WATER_FEASIBILITY'] = combined_gdf['WATER_FEASIBILITY'].fillna(0)
+combined_gdf['BUS_FEASIBILITY'] = combined_gdf['BUS_FEASIBILITY'].fillna(0)
 
 # Initialize the TOTAL WEIGHTED FEASIBILITY column
 combined_gdf['TOTAL WEIGHTED FEASIBILITY'] = 0
 
-# Calculate total feasibility with plain Python logic
+# Calculate total feasibility with Python logic
 for idx, row in combined_gdf.iterrows():
-    if row['JOBS_FEASIBILITY'] == 0 or row['TRAFFIC_FEASIBILITY'] == 0:
+    feasibilities = [
+        row['JOBS_FEASIBILITY'],
+        row['POPULATION_FEASIBILITY'],
+        row['TRAFFIC_FEASIBILITY'],
+        row['WATER_FEASIBILITY'],
+        row['BUS_FEASIBILITY']
+    ]
+    if any(f == 0 for f in feasibilities):
         combined_gdf.at[idx, 'TOTAL WEIGHTED FEASIBILITY'] = 0
     else:
-        combined_gdf.at[idx, 'TOTAL WEIGHTED FEASIBILITY'] = (row['JOBS_FEASIBILITY'] + row['TRAFFIC_FEASIBILITY']) / 2
+        combined_gdf.at[idx, 'TOTAL WEIGHTED FEASIBILITY'] = sum(feasibilities) / len(feasibilities)
 
 # Update the original grid with the combined feasibility values
 grid_gdf['TOTAL WEIGHTED FEASIBILITY'] = combined_gdf['TOTAL WEIGHTED FEASIBILITY']

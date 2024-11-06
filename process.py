@@ -2,7 +2,11 @@ import geopandas as gpd
 
 # Load the grid files
 jobs_gdf = gpd.read_file("C:/Users/Paul/Documents/metro project/weighted thresholded jobs grid.gpkg")
+population_gdf = gpd.read_file("C:/Users/Paul/Documents/metro project/c:\Users\Paul\Documents\metro project\weighted thresholded walking distance grid.gpkg")
 traffic_gdf = gpd.read_file("C:/Users/Paul/Documents/metro project/weighted traffic grid.gpkg")
+water_gdf = gpd.read_file("C:/Users/Paul/Documents/metro project/water.gpkg")
+bus_gdf = gpd.read_file("C:/Users/Paul/Documents/metro project/water.gpkg")
+
 grid_gdf = gpd.read_file("C:/Users/Paul/Documents/metro project/county grid.gpkg")
 
 # Rename columns for clarity

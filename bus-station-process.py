@@ -33,7 +33,7 @@ buffered_station_indices = buffered_intersection_gdf[buffered_intersection_gdf['
 grid_gdf.loc[buffered_station_indices, 'CONTAINS_STATION'] = 1  # or use a different field if needed
 
 # Create an output path for the data
-output_fp = "C:/Users/Paul/Documents/metro project/grid_proc.gpkg"
+output_fp = "C:/Users/Paul/Documents/metro project/bus station grid.gpkg"
 
 # Write the updated grid GeoDataFrame to file
 grid_gdf.to_file(output_fp, driver="GPKG")

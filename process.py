@@ -1,26 +1,40 @@
-import os
 import geopandas as gpd
+import numpy as np
 
-#Get a GeoDataFrame of the grid
-grid_gdf = gpd.read_file("GISFiles/CountyGrid.gpkg")
-water_gdf = gpd.read_file("GISFiles/water.gpkg")
-if grid_gdf.crs != water_gdf.crs:
-    water_gdf = water_gdf.to_crs(grid_gdf.crs)
+# Read grid and population GeoDataFrames
+grid_gdf = gpd.read_file("C:/Users/Paul/Documents/metro project/bus station grid.gpkg")
 
-grid_gdf['CONTAINS_WATER'] = 0  # initialize field, float, two decimals
+grid_gdf['WEIGHTED_FEASIBILITY'] = 0
 
-intersection_gdf = gpd.sjoin(grid_gdf, water_gdf, how="left", predicate="intersects")
+# Define decay function parameters
+decay_constant = 100  # Decay constant for how fast feasibility fades, adjust based on the scale of your grid
 
-# Filter out rows from intersection_gdf where 'index_right' is not null (meaning water is intersecting)
-# Get the unique indices from the grid_gdf where water is present
-water_indices = intersection_gdf[intersection_gdf['index_right'].notnull()].index.unique()
+# Get feasible blocks (where IS_FEASIBLE == 1)
+feasible_blocks = grid_gdf[grid_gdf['CONTAINS_STATION'] == 1]
 
-# Set 'CONTAINS_WATER' to 1 for rows in grid_gdf that have an index in water_indices
-grid_gdf.loc[water_indices, 'CONTAINS_WATER'] = 1
+# Loop through each grid block
+for i, grid_row in grid_gdf.iterrows():
+    if grid_row['CONTAINS_STATION'] == 1:
+        # If the block is already feasible, assign max weight (e.g., 1)
+        grid_gdf.at[i, 'WEIGHTED_FEASIBILITY'] = 1
+    else:
+        # If the block is not feasible, calculate the distance to the nearest feasible block
+        grid_center = grid_row.geometry.centroid
+        
+        # Calculate the distance to each feasible block's centroid
+        feasible_blocks['distance'] = feasible_blocks.geometry.centroid.distance(grid_center)
+        
+        # Find the minimum distance to any feasible block
+        min_distance = feasible_blocks['distance'].min()
+        
+        # Apply the decay function to calculate the weight based on distance
+        weight = np.exp(-min_distance / decay_constant)
+        
+        # Assign the calculated weight to the grid block
+        grid_gdf.at[i, 'WEIGHTED_FEASIBILITY'] = weight
 
+# Create an output path for the data
+output_fp = "C:/Users/Paul/Documents/metro project/weighted bus station grid.gpkg"
 
-# Create a output path for the data
-output_fp = os.getcwd() + "/GISFiles/grid_proc.gpkg"
-
-# Write the file
+# Write the updated grid GeoDataFrame to file
 grid_gdf.to_file(output_fp, driver="GPKG")

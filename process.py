@@ -4,7 +4,7 @@ import geopandas as gpd
 jobs_gdf = gpd.read_file("C:/Users/Paul/Documents/metro project/weighted thresholded jobs grid.gpkg")
 population_gdf = gpd.read_file("C:/Users/Paul/Documents/metro project/weighted thresholded walking distance grid.gpkg")
 traffic_gdf = gpd.read_file("C:/Users/Paul/Documents/metro project/weighted traffic grid.gpkg")
-water_gdf = gpd.read_file("C:/Users/Paul/Documents/metro project/water clipped.gpkg")
+water_gdf = gpd.read_file("C:/Users/Paul/Documents/metro project/water grid.gpkg")
 bus_gdf = gpd.read_file("C:/Users/Paul/Documents/metro project/weighted bus station grid.gpkg")
 
 grid_gdf = gpd.read_file("C:/Users/Paul/Documents/metro project/county grid.gpkg")

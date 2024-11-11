@@ -29,13 +29,6 @@ combined_gdf = grid_gdf.merge(
     bus_gdf[['geometry', 'BUS_FEASIBILITY']], on='geometry', how='left'
 )
 
-# Fill NaNs with 0 for missing feasibility values
-combined_gdf['JOBS_FEASIBILITY'] = combined_gdf['JOBS_FEASIBILITY'].fillna(0)
-combined_gdf['POPULATION_FEASIBILITY'] = combined_gdf['POPULATION_FEASIBILITY'].fillna(0)
-combined_gdf['TRAFFIC_FEASIBILITY'] = combined_gdf['TRAFFIC_FEASIBILITY'].fillna(0)
-combined_gdf['WATER_FEASIBILITY'] = combined_gdf['WATER_FEASIBILITY'].fillna(0)
-combined_gdf['BUS_FEASIBILITY'] = combined_gdf['BUS_FEASIBILITY'].fillna(0)
-
 # Initialize the TOTAL WEIGHTED FEASIBILITY column
 combined_gdf['TOTAL WEIGHTED FEASIBILITY'] = 0
 
@@ -45,10 +38,9 @@ for idx, row in combined_gdf.iterrows():
         row['JOBS_FEASIBILITY'],
         row['POPULATION_FEASIBILITY'],
         row['TRAFFIC_FEASIBILITY'],
-        row['WATER_FEASIBILITY'],
         row['BUS_FEASIBILITY']
     ]
-    if any(f == 0 for f in feasibilities):
+    if any(f == 0 for f in feasibilities) or combined_gdf.at[idx, 'WATER_FEASIBILITY'] == 0:
         combined_gdf.at[idx, 'TOTAL WEIGHTED FEASIBILITY'] = 0
     else:
         combined_gdf.at[idx, 'TOTAL WEIGHTED FEASIBILITY'] = sum(feasibilities) / len(feasibilities)

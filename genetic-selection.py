@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 # ----------------------------------- #
 
 # 1. Load the Weighted Feasibility Grid
-grid_filepath = "C:/Users/kavan_3rgiqdq/Documents/metro project/weighted grid.gpkg"  # Update the path if necessary
+grid_filepath = os.getcwd() + "/GISFiles/weighted grid.gpkg"  # Update the path if necessary
 grid_gdf = gpd.read_file(grid_filepath)
 
 # 2. Filter Viable Grids Based on Feasibility
@@ -54,41 +54,59 @@ def init_individual():
         replace=False
     ))
 
-# 8. Define the Fitness Function
+# ... [Previous code remains unchanged up to step 8]
+
+# Precompute normalized feasibility scores
+min_feasibility = viable_grids["TOTAL WEIGHTED FEASIBILITY"].min()
+max_feasibility = viable_grids["TOTAL WEIGHTED FEASIBILITY"].max()
+viable_grids["Normalized Feasibility"] = (
+    viable_grids["TOTAL WEIGHTED FEASIBILITY"] - min_feasibility
+) / (max_feasibility - min_feasibility)
+
+# Desired number of stations (set as the average of N_MIN and N_MAX)
+N_DESIRED = (N_MIN + N_MAX) // 2
+
+# Weights for the fitness function components
+W1 = 2.0  # Weight for feasibility score
+W2 = 3.0  # Weight for distance penalty
+W3 = 1.0  # Weight for station count penalty
+
 def evaluate(individual):
     """
-    Fitness function to evaluate the quality of station placement.
-    The goal is to maximize the total weighted feasibility while minimizing penalties.
+    Redesigned fitness function to balance feasibility and constraints.
     """
-    # Retrieve station geometries
+    # Retrieve station geometries and normalized feasibility scores
     stations = viable_grids.loc[individual]
-
-    # Total Feasibility Score
-    total_feasibility = stations["TOTAL WEIGHTED FEASIBILITY"].sum()
-
-    # Initialize Penalties
-    distance_penalty = 0
-    num_stations_penalty = 0
-
-    # Number of Stations Penalty (Exponential)
-    N = len(individual)
-    if N < N_MIN:
-        num_stations_penalty = P_N * np.exp(-BETA * (N - N_MIN))
-    elif N > N_MAX:
-        num_stations_penalty = P_N * np.exp(BETA * (N - N_MAX))
-
-    # Calculate Distance Penalties Between Stations (Exponential)
+    feasibility_scores = stations["Normalized Feasibility"].values
+    
+    # Total Normalized Feasibility Score
+    total_feasibility = feasibility_scores.sum() / N_DESIRED  # Normalize by desired number of stations
+    
+    # Distance Penalty
+    distance_penalty = 0.0
     coords = stations.geometry.centroid.apply(lambda point: (point.x, point.y)).tolist()
     for i in range(len(coords)):
         for j in range(i + 1, len(coords)):
-            d_nm = np.linalg.norm(np.array(coords[i]) - np.array(coords[j]))
-            if d_nm < D_MIN:
-                distance_penalty += P_CLOSE * np.exp(-ALPHA * (d_nm - D_MIN))
-            elif d_nm > D_MAX:
-                distance_penalty += P_FAR * np.exp(ALPHA * (d_nm - D_MAX))
-
+            d = np.linalg.norm(np.array(coords[i]) - np.array(coords[j]))
+            if d < D_MIN:
+                distance_penalty += ( (D_MIN - d) / D_MIN ) ** 2
+            elif d > D_MAX:
+                distance_penalty += ( (d - D_MAX) / D_MAX ) ** 2
+    # Normalize distance penalty
+    max_possible_pairs = len(coords) * (len(coords) - 1) / 2
+    if max_possible_pairs > 0:
+        distance_penalty /= max_possible_pairs
+    
+    # Station Count Penalty
+    N = len(individual)
+    station_count_penalty = ( (N - N_DESIRED) / N_DESIRED ) ** 2
+    
     # Total Fitness Calculation
-    fitness = total_feasibility - distance_penalty - num_stations_penalty
+    fitness = (
+        W1 * total_feasibility
+        - W2 * distance_penalty
+        - W3 * station_count_penalty
+    )
     return (fitness,)
 
 # 9. Set Up DEAP Framework
@@ -200,7 +218,7 @@ def main():
     best_stations = viable_grids.loc[best_individual]
 
     # Output Path for the Best Stations
-    output_fp = "C:/Users/kavan_3rgiqdq/Documents/metro project/best stations.gpkg"
+    output_fp = os.getcwd() + "/GISFiles/best stations.gpkg"
 
     # Create the Output Directory if It Doesn't Exist
     os.makedirs(os.path.dirname(output_fp), exist_ok=True)

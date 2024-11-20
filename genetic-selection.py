@@ -5,9 +5,9 @@ import random
 from deap import base, creator, tools, algorithms
 import matplotlib.pyplot as plt
 
-# ------------------------------ #
-#       Genetic Algorithm Setup   #
-# ------------------------------ #
+# ----------------------------------- #
+#       Genetic Algorithm Setup       #
+# ----------------------------------- #
 
 # 1. Load the Weighted Feasibility Grid
 grid_filepath = "C:/Users/kavan_3rgiqdq/Documents/metro project/weighted grid.gpkg"  # Update the path if necessary

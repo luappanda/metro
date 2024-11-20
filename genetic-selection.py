@@ -6,7 +6,7 @@ from deap import base, creator, tools, algorithms
 import matplotlib.pyplot as plt
 
 # ----------------------------------- #
-#       Genetic Algorithm Setup       #
+#       Genetic Algoritfhm Setup       #
 # ----------------------------------- #
 
 # 1. Load the Weighted Feasibility Grid

@@ -23,14 +23,14 @@ weights_normalized = weights / weights.sum()
 # 4. Genetic Algorithm Parameters
 N_MIN = 10                 # Minimum number of stations
 N_MAX = 30                 # Maximum number of stations
-POPULATION_SIZE = 50       # Number of individuals in the population
+POPULATION_SIZE = 30       # Number of individuals in the population
 NUM_GENERATIONS = 200      # Number of generations
 CX_PROB = 0.5              # Crossover probability
-MUT_PROB = 0.4             # Mutation probability
-SEED = 45                  # Random seed for reproducibility
+MUT_PROB = 0.35            # Mutation probability
+SEED = 37                  # Random seed for reproducibility
 
 # 5. Constraints and Penalties
-D_MIN = 7000               # Minimum distance between stations in meters
+D_MIN = 5000               # Minimum distance between stations in meters
 D_MAX = 35000              # Maximum distance between stations in meters
 P_CLOSE = 2000             # Penalty factor for stations too close
 P_FAR = 50                 # Penalty factor for stations too far
@@ -180,6 +180,7 @@ toolbox.register("mutate", mutate_individual, indpb=0.2)
 toolbox.register("select", tools.selTournament, tournsize=3)
 
 # 10. Main Genetic Algorithm Function
+# 10. Main Genetic Algorithm Function
 def main():
     # Initialize Population
     population = toolbox.population(n=POPULATION_SIZE)
@@ -213,6 +214,33 @@ def main():
     best_individual = hof[0]
     print("Best Individual Fitness:", best_individual.fitness.values[0])
     print("Best Individual Stations Indices:", best_individual)
+
+    # Calculate Penalties for Loss Row
+    stations = viable_grids.loc[best_individual]
+    feasibility_scores = stations["Normalized Feasibility"].values
+    total_feasibility = feasibility_scores.sum() / N_DESIRED
+    
+    # Distance Penalty
+    coords = stations.geometry.centroid.apply(lambda point: (point.x, point.y)).tolist()
+    distance_penalty = 0.0
+    for i in range(len(coords)):
+        for j in range(i + 1, len(coords)):
+            d = np.linalg.norm(np.array(coords[i]) - np.array(coords[j]))
+            if d < D_MIN:
+                distance_penalty += ((D_MIN - d) / D_MIN) ** 2
+            elif d > D_MAX:
+                distance_penalty += ((d - D_MAX) / D_MAX) ** 2
+    max_possible_pairs = len(coords) * (len(coords) - 1) / 2
+    if max_possible_pairs > 0:
+        distance_penalty /= max_possible_pairs
+
+    # Station Count Penalty
+    N = len(best_individual)
+    station_count_penalty = ((N - N_DESIRED) / N_DESIRED) ** 2
+
+    # Loss Calculation
+    total_loss = W2 * distance_penalty + W3 * station_count_penalty
+    print(f"Loss Contribution: {total_loss:.4f}")
 
     # Retrieve the Best Stations GeoDataFrame
     best_stations = viable_grids.loc[best_individual]

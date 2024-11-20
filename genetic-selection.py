@@ -21,12 +21,12 @@ weights = viable_grids["TOTAL WEIGHTED FEASIBILITY"].values
 weights_normalized = weights / weights.sum()
 
 # 4. Genetic Algorithm Parameters
-N_MIN = 1                  # Minimum number of stations
+N_MIN = 10                 # Minimum number of stations
 N_MAX = 30                 # Maximum number of stations
-POPULATION_SIZE = 60       # Number of individuals in the population
-NUM_GENERATIONS = 500      # Number of generations
+POPULATION_SIZE = 50       # Number of individuals in the population
+NUM_GENERATIONS = 200      # Number of generations
 CX_PROB = 0.5              # Crossover probability
-MUT_PROB = 0.3             # Mutation probability
+MUT_PROB = 0.4             # Mutation probability
 SEED = 45                  # Random seed for reproducibility
 
 # 5. Constraints and Penalties

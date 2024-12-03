@@ -22,23 +22,20 @@ weights_normalized = weights / weights.sum()
 
 # 4. Genetic Algorithm Parameters
 N_MIN = 5                  # Minimum number of stations
-N_MAX = 15                 # Maximum number of stations
-POPULATION_SIZE = 40       # Number of individuals in the population
-NUM_GENERATIONS = 600      # Number of generations
-CX_PROB = 0.5              # Crossover probability
-MUT_PROB = 0.2             # Mutation probability
+N_MAX = 20                 # Maximum number of stations
+POPULATION_SIZE = 150      # Increased population size
+NUM_GENERATIONS = 750     # Increased number of generations
+CX_PROB = 0.75              # Increased crossover probability
+MUT_PROB = 0.35             # Increased mutation probability
 SEED = 23                  # Random seed for reproducibility
 
 # 5. Constraints and Penalties
-D_MIN = 5000               # Minimum distance between stations in meters
-D_MAX = 20000              # Maximum distance between stations in meters
-P_CLOSE = 100              # Penalty factor for stations too close
-P_FAR = 50                 # Penalty factor for stations too far
-P_N = 1000                 # Penalty factor for violating number of stations
+D_MIN = 17500              # Minimum distance between stations in meters
+D_MAX = 50000              # Maximum distance between stations in meters
 
 # Scaling factors for exponential penalties
-ALPHA = 0.001              # Scaling factor for distance penalties
-BETA = 0.5                 # Scaling factor for number of stations penalty
+ALPHA = 0.001              # Adjusted scaling factor for distance penalties
+BETA = 1.0                 # Adjusted scaling factor for number of stations penalty
 
 # 6. Initialize Random Seed
 random.seed(SEED)
@@ -54,8 +51,6 @@ def init_individual():
         replace=False
     ))
 
-# ... [Previous code remains unchanged up to step 8]
-
 # Precompute normalized feasibility scores
 min_feasibility = viable_grids["TOTAL WEIGHTED FEASIBILITY"].min()
 max_feasibility = viable_grids["TOTAL WEIGHTED FEASIBILITY"].max()
@@ -67,9 +62,9 @@ viable_grids["Normalized Feasibility"] = (
 N_DESIRED = (N_MIN + N_MAX) // 2
 
 # Weights for the fitness function components
-W1 = 2.0  # Weight for feasibility score
-W2 = 3.0  # Weight for distance penalty
-W3 = 1.0  # Weight for station count penalty
+W1 = 1.0  # Adjusted weight for feasibility score
+W2 = 5.0  # Increased weight for distance penalty
+W3 = 3.0  # Increased weight for station count penalty
 
 def evaluate(individual):
     """
@@ -78,10 +73,10 @@ def evaluate(individual):
     # Retrieve station geometries and normalized feasibility scores
     stations = viable_grids.loc[individual]
     feasibility_scores = stations["Normalized Feasibility"].values
-    
-    # Total Normalized Feasibility Score
-    total_feasibility = feasibility_scores.sum() / N_DESIRED  # Normalize by desired number of stations
-    
+
+    # Total Normalized Feasibility Score (average per station)
+    total_feasibility = feasibility_scores.mean()
+
     # Distance Penalty
     distance_penalty = 0.0
     coords = stations.geometry.centroid.apply(lambda point: (point.x, point.y)).tolist()
@@ -89,18 +84,18 @@ def evaluate(individual):
         for j in range(i + 1, len(coords)):
             d = np.linalg.norm(np.array(coords[i]) - np.array(coords[j]))
             if d < D_MIN:
-                distance_penalty += ( (D_MIN - d) / D_MIN ) ** 2
+                distance_penalty += np.exp(-ALPHA * (d - D_MIN))
             elif d > D_MAX:
-                distance_penalty += ( (d - D_MAX) / D_MAX ) ** 2
+                distance_penalty += np.exp(ALPHA * (d - D_MAX))
     # Normalize distance penalty
     max_possible_pairs = len(coords) * (len(coords) - 1) / 2
     if max_possible_pairs > 0:
         distance_penalty /= max_possible_pairs
-    
+
     # Station Count Penalty
     N = len(individual)
-    station_count_penalty = ( (N - N_DESIRED) / N_DESIRED ) ** 2
-    
+    station_count_penalty = np.exp(BETA * abs(N - N_DESIRED))
+
     # Total Fitness Calculation
     fitness = (
         W1 * total_feasibility
@@ -143,8 +138,10 @@ def crossover_individuals(ind1, ind2):
         for idx1, idx2 in zip(indices1, indices2):
             gene1 = unique1[idx1]
             gene2 = unique2[idx2]
-            ind1[ind1.index(gene1)] = gene2
-            ind2[ind2.index(gene2)] = gene1
+            if gene2 not in ind1:
+                ind1[ind1.index(gene1)] = gene2
+            if gene1 not in ind2:
+                ind2[ind2.index(gene2)] = gene1
 
     return ind1, ind2
 
@@ -174,10 +171,10 @@ def mutate_individual(individual, indpb):
                 individual[i] = new_gene
     return (individual,)
 
-toolbox.register("mutate", mutate_individual, indpb=0.2)
+toolbox.register("mutate", mutate_individual, indpb=0.3)
 
-# Selection Operator: Tournament Selection
-toolbox.register("select", tools.selTournament, tournsize=3)
+# Selection Operator: Tournament Selection with lower pressure
+toolbox.register("select", tools.selTournament, tournsize=2)
 
 # 10. Main Genetic Algorithm Function
 def main():

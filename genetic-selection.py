@@ -1,9 +1,19 @@
 import os
 import geopandas as gpd
 import numpy as np
+from scipy.spatial import cKDTree
 import random
 from deap import base, creator, tools, algorithms
 import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression
+from shapely.ops import unary_union
+import rasterio
+from rasterio.mask import mask
+from rasterio.plot import show
+from shapely.geometry import Point
+from affine import Affine
+from joblib import Parallel, delayed
+
 
 # ----------------------------------- #
 #       Genetic Algoritfhm Setup       #
@@ -12,6 +22,22 @@ import matplotlib.pyplot as plt
 # 1. Load the Weighted Feasibility Grid
 grid_filepath = os.getcwd() + "/GISFiles/weighted grid.gpkg"  # Update the path if necessary
 grid_gdf = gpd.read_file(grid_filepath)
+population_filepath = os.getcwd() + "/GISFiles/block population.gpkg"
+population_gdf = gpd.read_file(population_filepath)
+population_gdf = population_gdf[~population_gdf.is_empty]  # Remove empty geometries
+population_gdf = population_gdf[population_gdf.is_valid] 
+if population_gdf.crs.is_geographic:
+    population_gdf = population_gdf.to_crs("EPSG:3857")  # Use Web Mercator or appropriate CRS
+
+# Load the raster
+raster_filepath = os.getcwd() + "/GISFiles/output_population_raster2.tif"  # Update the path if necessary
+with rasterio.open(raster_filepath) as src:
+    raster_crs = src.crs
+    population_raster = src.read(1)  # Read population data (first band)
+    transform = src.transform
+    width = src.width
+    height = src.height
+    resolution = transform[0]  # Get resolution (pixel size in meters)
 
 # 2. Filter Viable Grids Based on Feasibility
 viable_grids = grid_gdf[grid_gdf["TOTAL WEIGHTED FEASIBILITY"] > 0].reset_index(drop=True)
@@ -20,18 +46,22 @@ viable_grids = grid_gdf[grid_gdf["TOTAL WEIGHTED FEASIBILITY"] > 0].reset_index(
 weights = viable_grids["TOTAL WEIGHTED FEASIBILITY"].values
 weights_normalized = weights / weights.sum()
 
+# Normalize covered population as a score
+max_population = population_gdf["POP20"].sum()
+
 # 4. Genetic Algorithm Parameters
 N_MIN = 5                  # Minimum number of stations
 N_MAX = 20                 # Maximum number of stations
 POPULATION_SIZE = 150      # Increased population size
-NUM_GENERATIONS = 750     # Increased number of generations
+NUM_GENERATIONS = 40       # Increased number of generations
 CX_PROB = 0.75              # Increased crossover probability
 MUT_PROB = 0.35             # Increased mutation probability
 SEED = 23                  # Random seed for reproducibility
 
 # 5. Constraints and Penalties
-D_MIN = 17500              # Minimum distance between stations in meters
-D_MAX = 50000              # Maximum distance between stations in meters
+D_MIN = 2000              # Minimum distance between stations in meters
+D_MAX = 5000              # Maximum distance between stations in meters
+POPULATION_RADIUS = 2000 # Radius around each station to consider population
 
 # Scaling factors for exponential penalties
 ALPHA = 0.001              # Adjusted scaling factor for distance penalties
@@ -62,20 +92,46 @@ viable_grids["Normalized Feasibility"] = (
 N_DESIRED = (N_MIN + N_MAX) // 2
 
 # Weights for the fitness function components
-W1 = 1.0  # Adjusted weight for feasibility score
-W2 = 5.0  # Increased weight for distance penalty
-W3 = 3.0  # Increased weight for station count penalty
+W1 = 0.0  # Adjusted weight for feasibility score
+W2 = 0.0  # Increased weight for distance penalty
+W3 = 0.0  # Increased weight for station count penalty
+W4 = 0.0 # Weight for linearity
+W5 = 1.0 # Weight for population coverage
 
 def evaluate(individual):
     """
-    Redesigned fitness function to balance feasibility and constraints.
+    Redesigned fitness function to balance feasibility, constraints, and linearity.
     """
     # Retrieve station geometries and normalized feasibility scores
     stations = viable_grids.loc[individual]
-    feasibility_scores = stations["Normalized Feasibility"].values
-
-    # Total Normalized Feasibility Score (average per station)
+    stations = stations.to_crs(raster_crs)
+    feasibility_scores = stations["TOTAL WEIGHTED FEASIBILITY"].values
     total_feasibility = feasibility_scores.mean()
+
+
+    # Create station buffers
+    station_buffers = stations.geometry.buffer(POPULATION_RADIUS)
+
+    # Combine station buffers into a single MultiPolygon
+    combined_buffer = unary_union(station_buffers)
+
+    # Calculate population coverage for each station
+    stations_coords = []
+    for station in stations.geometry:
+        station_coords = (station.centroid.x, station.centroid.y)
+        stations_coords.append(station_coords)
+
+    resolution = transform[0]  # Pixel size (e.g., in meters per pixel)
+    covered_population = calculate_population_in_radius(
+            stations_coords, population_raster, transform, radius=POPULATION_RADIUS, width=width, height=height, resolution=resolution)
+
+    # Sum population of intersecting features
+    # covered_population = intersecting_population["POP20"].sum()
+    # print(covered_population)
+
+    population_score = covered_population / max_population
+    # print(population_score)
+
 
     # Distance Penalty
     distance_penalty = 0.0
@@ -96,11 +152,23 @@ def evaluate(individual):
     N = len(individual)
     station_count_penalty = np.exp(BETA * abs(N - N_DESIRED))
 
+    # Linearity Penalty/Reward
+    if len(coords) > 1:
+        X = np.array([c[0] for c in coords]).reshape(-1, 1)  # x-coordinates
+        y = np.array([c[1] for c in coords])  # y-coordinates
+        reg = LinearRegression().fit(X, y)
+        r_squared = reg.score(X, y)  # Coefficient of determination (R^2)
+        linearity_score = 1 - r_squared  # Penalize deviation from perfect linearity
+    else:
+        linearity_score = 1.0  # Maximum penalty for single station
+
     # Total Fitness Calculation
     fitness = (
         W1 * total_feasibility
         - W2 * distance_penalty
         - W3 * station_count_penalty
+        - W4 * linearity_score
+        + W5 * population_score
     )
     return (fitness,)
 
@@ -116,6 +184,43 @@ toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
 # Register the Evaluation Function
 toolbox.register("evaluate", evaluate)
+
+def calculate_population_in_radius(station_coords, population_raster, transform, radius, width, height, resolution):
+    # Convert station coordinates to pixel coordinates (Inverse transform)
+    station_pixel_coords = [
+        ~transform * (x, y)  # Apply inverse transform to (x, y) for pixel coordinates
+        for (x, y) in station_coords
+    ]
+
+    population_within_radius = 0
+
+    # Convert radius to pixels
+    radius_pixels = int(radius / resolution)  # Convert meters to pixels
+    
+    covered_pixels = set()
+    
+    for station_pixel in station_pixel_coords:
+        col, row = station_pixel
+        # Define the bounding box for the search area (radius around the station)
+        min_row = max(0, int(row - radius_pixels))
+        max_row = min(height, int(row + radius_pixels))
+        min_col = max(0, int(col - radius_pixels))
+        max_col = min(width, int(col + radius_pixels))
+        # Loop through the pixels within the radius
+        for r in range(min_row, max_row):
+            for c in range(min_col, max_col):
+                # Check if the pixel is within the radius (Euclidean distance check)
+                dist = np.sqrt((r - row)**2 + (c - col)**2)
+                if dist <= radius_pixels:
+                    # Add the population value of this pixel (from the population raster)
+                    # population_within_radius += population_raster[r, c]
+                    covered_pixels.add((r,c))
+            
+    for r, c in covered_pixels:
+        population_within_radius += population_raster[r,c]
+    
+    return population_within_radius
+
 
 # Custom Crossover Operator for Variable-Length Individuals
 def crossover_individuals(ind1, ind2):
@@ -182,8 +287,12 @@ def main():
     # Initialize Population
     population = toolbox.population(n=POPULATION_SIZE)
 
-    # Evaluate the entire population
-    fitnesses = list(map(toolbox.evaluate, population))
+    ## Parallelize the evaluation of the fitness function
+    num_jobs = -1  # Use all available CPU cores, or set it to a specific number (e.g., 4)
+    fitnesses = Parallel(n_jobs=num_jobs)(
+        delayed(toolbox.evaluate)(ind) for ind in population
+    )
+
     for ind, fit in zip(population, fitnesses):
         ind.fitness.values = fit
 

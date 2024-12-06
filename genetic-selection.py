@@ -19,6 +19,9 @@ from joblib import Parallel, delayed
 #       Genetic Algoritfhm Setup       #
 # ----------------------------------- #
 
+# Global cache for fitness evaluations
+fitness_cache = {}
+
 # 1. Load the Weighted Feasibility Grid
 grid_filepath = os.getcwd() + "/GISFiles/weighted grid.gpkg"  # Update the path if necessary
 grid_gdf = gpd.read_file(grid_filepath)
@@ -51,16 +54,16 @@ max_population = population_gdf["POP20"].sum()
 
 # 4. Genetic Algorithm Parameters
 N_MIN = 5                  # Minimum number of stations
-N_MAX = 20                 # Maximum number of stations
+N_MAX = 10                # Maximum number of stations
 POPULATION_SIZE = 150      # Increased population size
-NUM_GENERATIONS = 40       # Increased number of generations
+NUM_GENERATIONS = 650      # Increased number of generations
 CX_PROB = 0.75              # Increased crossover probability
 MUT_PROB = 0.35             # Increased mutation probability
 SEED = 23                  # Random seed for reproducibility
 
 # 5. Constraints and Penalties
 D_MIN = 2000              # Minimum distance between stations in meters
-D_MAX = 5000              # Maximum distance between stations in meters
+D_MAX = 20000              # Maximum distance between stations in meters
 POPULATION_RADIUS = 2000 # Radius around each station to consider population
 
 # Scaling factors for exponential penalties
@@ -92,28 +95,28 @@ viable_grids["Normalized Feasibility"] = (
 N_DESIRED = (N_MIN + N_MAX) // 2
 
 # Weights for the fitness function components
-W1 = 0.0  # Adjusted weight for feasibility score
-W2 = 0.0  # Increased weight for distance penalty
-W3 = 0.0  # Increased weight for station count penalty
-W4 = 0.0 # Weight for linearity
-W5 = 1.0 # Weight for population coverage
+W1 = 9.0  # Adjusted weight for feasibility score
+W2 = 1.0  # Increased weight for distance penalty
+W3 = 3.0  # Increased weight for station count penalty
+W4 = 15.0 # Weight for linearity
+W5 = 4.0 # Weight for population coverage
 
 def evaluate(individual):
     """
     Redesigned fitness function to balance feasibility, constraints, and linearity.
     """
+    # Create a hashable key from the individual
+    key = tuple(sorted(individual))
+    if key in fitness_cache:
+        # Return cached fitness value
+        return (fitness_cache[key],)
+
     # Retrieve station geometries and normalized feasibility scores
     stations = viable_grids.loc[individual]
     stations = stations.to_crs(raster_crs)
     feasibility_scores = stations["TOTAL WEIGHTED FEASIBILITY"].values
     total_feasibility = feasibility_scores.mean()
 
-
-    # Create station buffers
-    station_buffers = stations.geometry.buffer(POPULATION_RADIUS)
-
-    # Combine station buffers into a single MultiPolygon
-    combined_buffer = unary_union(station_buffers)
 
     # Calculate population coverage for each station
     stations_coords = []
@@ -170,6 +173,7 @@ def evaluate(individual):
         - W4 * linearity_score
         + W5 * population_score
     )
+    fitness_cache[key] = fitness
     return (fitness,)
 
 # 9. Set Up DEAP Framework
@@ -192,33 +196,30 @@ def calculate_population_in_radius(station_coords, population_raster, transform,
         for (x, y) in station_coords
     ]
 
-    population_within_radius = 0
-
     # Convert radius to pixels
     radius_pixels = int(radius / resolution)  # Convert meters to pixels
-    
-    covered_pixels = set()
-    
+    radius_squared = radius_pixels**2
+
+    population_within_radius = 0
+    visited = np.zeros((height, width), dtype=bool)  # Create a 2D array for visited pixels
+
     for station_pixel in station_pixel_coords:
-        col, row = station_pixel
-        # Define the bounding box for the search area (radius around the station)
-        min_row = max(0, int(row - radius_pixels))
-        max_row = min(height, int(row + radius_pixels))
-        min_col = max(0, int(col - radius_pixels))
-        max_col = min(width, int(col + radius_pixels))
-        # Loop through the pixels within the radius
+        col, row = map(int, station_pixel)
+
+        # Define the bounding box for the search area
+        min_row = max(0, row - radius_pixels)
+        max_row = min(height, row + radius_pixels + 1)
+        min_col = max(0, col - radius_pixels)
+        max_col = min(width, col + radius_pixels + 1)
+
+        # Directly iterate over the bounding box
         for r in range(min_row, max_row):
             for c in range(min_col, max_col):
-                # Check if the pixel is within the radius (Euclidean distance check)
-                dist = np.sqrt((r - row)**2 + (c - col)**2)
-                if dist <= radius_pixels:
-                    # Add the population value of this pixel (from the population raster)
-                    # population_within_radius += population_raster[r, c]
-                    covered_pixels.add((r,c))
-            
-    for r, c in covered_pixels:
-        population_within_radius += population_raster[r,c]
-    
+                dist_squared = (r - row)**2 + (c - col)**2
+                if dist_squared <= radius_squared and not visited[r, c]:
+                    population_within_radius += population_raster[r, c]
+                    visited[r, c] = True  # Mark pixel as visited
+
     return population_within_radius
 
 

@@ -3,6 +3,7 @@ import geopandas as gpd
 import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
 from matplotlib.colorbar import ColorbarBase
+from matplotlib.font_manager import FontProperties
 import numpy as np
 
 # Define file paths
@@ -27,13 +28,16 @@ norm = Normalize(vmin=gdf['TOTAL WEIGHTED FEASIBILITY'].min(), vmax=gdf['TOTAL W
 gdf.plot(column='TOTAL WEIGHTED FEASIBILITY', cmap=cmap, norm=norm, ax=ax)
 
 # Add a colorbar
+# Add a colorbar with explicit configuration
 sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
 sm._A = []  # Dummy array for ScalarMappable
 cbar = fig.colorbar(sm, ax=ax)
-cbar.set_label('Total Weighted Feasbility')
+
+# Adjust the label and its distance from the colorbar
+cbar.set_label('Total Weighted Feasibility', labelpad=20.0, fontsize=15.0)  # Increase labelpad as needed
 
 # Add titles and labels
-ax.set_title("Weighted Feasibility")
+ax.set_title("Weighted Feasibility", fontsize=15.0)
 ax.axis('off')
 
 # Save the plot as a PNG file

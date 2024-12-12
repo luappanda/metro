@@ -13,6 +13,7 @@ from rasterio.plot import show
 from shapely.geometry import Point
 from affine import Affine
 from joblib import Parallel, delayed
+import pandas as pd
 
 
 # ----------------------------------- #
@@ -42,8 +43,27 @@ with rasterio.open(raster_filepath) as src:
     height = src.height
     resolution = transform[0]  # Get resolution (pixel size in meters)
 
+
 # 2. Filter Viable Grids Based on Feasibility
 viable_grids = grid_gdf[grid_gdf["TOTAL WEIGHTED FEASIBILITY"] > 0].reset_index(drop=True)
+
+# Load the selections from the first line.
+line1_filepath = os.getcwd() + "/GISFiles/best stations.gpkg"
+line1_gdf = gpd.read_file(line1_filepath)
+ids = line1_gdf["id"]
+# print(line1_gdf)
+
+line1 = viable_grids.loc[viable_grids['id'].isin(ids)].index.tolist()
+coords1 = viable_grids.loc[line1].to_crs(raster_crs).geometry.centroid.apply(lambda point: (point.x, point.y)).tolist()
+X1 = np.array([c[0] for c in coords1]).reshape(-1, 1)  # x-coordinates
+y2 = np.array([c[1] for c in coords1])  # y-coordinates
+reg1 = LinearRegression().fit(X1, y2)
+# r_squared = reg.score(X, y)  # Coefficient of determination (R^2)
+slope1 = reg1.coef_[0]
+
+
+
+
 
 # 3. Normalize Weights for Selection Probability
 weights = viable_grids["TOTAL WEIGHTED FEASIBILITY"].values
@@ -56,7 +76,7 @@ max_population = population_gdf["POP20"].sum()
 N_MIN = 5                  # Minimum number of stations
 N_MAX = 10                # Maximum number of stations
 POPULATION_SIZE = 150      # Increased population size
-NUM_GENERATIONS = 400     # Increased number of generations
+NUM_GENERATIONS = 200      # Increased number of generations
 CX_PROB = 0.75              # Increased crossover probability
 MUT_PROB = 0.35             # Increased mutation probability
 SEED = 23                  # Random seed for reproducibility
@@ -75,15 +95,61 @@ BETA = 1.0                 # Adjusted scaling factor for number of stations pena
 random.seed(SEED)
 np.random.seed(SEED)
 
+
+def find_covered_pixels_for_line_population(line, transform, radius, width, height, resolution):
+    stations = viable_grids.loc[line]
+    stations = stations.to_crs(raster_crs)
+    stations_coords = []
+    for station in stations.geometry:
+        station_coords = (station.centroid.x, station.centroid.y)
+        stations_coords.append(station_coords)
+    # Convert station coordinates to pixel coordinates (Inverse transform)
+    station_pixel_coords = [
+        ~transform * (x, y)  # Apply inverse transform to (x, y) for pixel coordinates
+        for (x, y) in stations_coords
+    ]
+    # Convert radius to pixels
+    radius_pixels = int(radius / resolution)  # Convert meters to pixels
+    radius_squared = radius_pixels**2
+
+    visited = np.zeros((height, width), dtype=bool)  # Create a 2D array for visited pixels
+
+    for station_pixel in station_pixel_coords:
+        col, row = map(int, station_pixel)
+
+        # Define the bounding box for the search area
+        min_row = max(0, row - radius_pixels)
+        max_row = min(height, row + radius_pixels + 1)
+        min_col = max(0, col - radius_pixels)
+        max_col = min(width, col + radius_pixels + 1)
+        # print(min_row)
+        # print(max_row)
+
+        # Directly iterate over the bounding box
+        for r in range(min_row, max_row):
+            for c in range(min_col, max_col):
+                dist_squared = (r - row)**2 + (c - col)**2
+                # print(visited[r,c])
+                if dist_squared <= radius_squared and not visited[r, c]:
+                    visited[r, c] = True  # Mark pixel as visited
+
+    return visited
+# Get covered pixels for line 1
+# resolution = transform[0]
+line1_visited = find_covered_pixels_for_line_population(line1, transform, radius=POPULATION_RADIUS, width=width, height=height, resolution=resolution)
+
 # 7. Function to Select Initial Stations Based on Weighted Feasibility
 def init_individual():
-    N = random.randint(N_MIN, N_MAX)
-    return list(np.random.choice(
+    N = random.randint(N_MIN-1, N_MAX-1)
+    stations = list(np.random.choice(
         viable_grids.index,
         size=N,
         p=weights_normalized,
         replace=False
     ))
+    stations.append(np.random.choice(line1))
+    return stations
+    # stations.append(np.random.choice())
 
 # Precompute normalized feasibility scores
 min_feasibility = viable_grids["TOTAL WEIGHTED FEASIBILITY"].min()
@@ -97,10 +163,11 @@ N_DESIRED = (N_MIN + N_MAX) // 2
 
 # Weights for the fitness function components
 W1 = 9.0  # Adjusted weight for feasibility score
-W2 = 3.0  # Increased weight for distance penalty
+W2 = 10.0  # Increased weight for distance penalty
 W3 = 1.0  # Increased weight for station count penalty
 W4 = 15.0 # Weight for linearity
 W5 = 10.0 # Weight for population coverage
+W6 = 20.0
 
 def evaluate(individual):
     """
@@ -113,12 +180,16 @@ def evaluate(individual):
         return (fitness_cache[key],)
 
     # Retrieve station geometries and normalized feasibility scores
+   
     stations = viable_grids.loc[individual]
     stations = stations.to_crs(raster_crs)
     feasibility_scores = stations["TOTAL WEIGHTED FEASIBILITY"].values
     total_feasibility = feasibility_scores.mean()
 
 
+    station_indices = individual + [item for item in line1 if item not in individual]
+    stations = viable_grids.loc[station_indices]
+    stations = stations.to_crs(raster_crs)
     # Calculate population coverage for each station
     stations_coords = []
     for station in stations.geometry:
@@ -132,8 +203,12 @@ def evaluate(individual):
     # Sum population of intersecting features
     # covered_population = intersecting_population["POP20"].sum()
     # print(covered_population)
-
-    population_score = covered_population / max_population
+   
+    # if covered_population < 10000:
+    #     population_score = -1
+    # else:
+    population_score = 2*covered_population / (max_population)
+    
     # print(population_score)
 
 
@@ -156,17 +231,44 @@ def evaluate(individual):
     N = len(individual)
     station_count_penalty = np.exp(BETA * abs(N - N_DESIRED))
 
+
+    X = np.array([c[0] for c in coords]).reshape(-1, 1)  # x-coordinates
+    y = np.array([c[1] for c in coords])  # y-coordinates
+
     # Linearity Penalty/Reward
     if len(coords) > 1:
-        X = np.array([c[0] for c in coords]).reshape(-1, 1)  # x-coordinates
-        y = np.array([c[1] for c in coords])  # y-coordinates
-        reg = LinearRegression().fit(X, y)
-        r_squared = reg.score(X, y)  # Coefficient of determination (R^2)
+        
+        reg2 = LinearRegression().fit(X, y)
+        r_squared = reg2.score(X, y)  # Coefficient of determination (R^2)
+        slope2 = reg2.coef_[0]
+        perp = abs(slope1 - slope2)
+        if perp < 0.5:
+            perp *= -1
         linearity_score = 1 - r_squared  # Penalize deviation from perfect linearity
-        if r_squared > 0.98:
-            linearity_score -= 1.0
     else:
+        perp = 0
         linearity_score = 1.0  # Maximum penalty for single station
+
+    # #Perpendicularness
+    # if len(coords)>1:
+    #     directions2 = np.diff(coords, axis=0)  # Shape (n2-1, 2)
+    #     norms2 = np.linalg.norm(directions2, axis=1, keepdims=True)
+    #     normalized2 = directions2 / norms2
+    #     # Handle mismatched lengths by aligning arrays
+    #     min_length = min(len(normalized1), len(normalized2))
+    #     normalized11 = normalized1[:min_length]
+    #     normalized2 = normalized2[:min_length]
+    #     # Compute dot products to find cosines of angles
+    #     cosines = np.sum(normalized11 * normalized2, axis=1)  # Shape (min_length,)
+        
+    #     # Compute perpendicularity (|sin(theta)| = sqrt(1 - cos^2(theta)))
+    #     perpendicularity = np.sqrt(1 - cosines**2)
+
+    #     # Aggregate perpendicularity (mean, max, or another metric)
+    #     perpendicular_score = np.mean(perpendicularity)
+    # else:
+    #     perpendicular_score = 0
+
 
     # Total Fitness Calculation
     fitness = (
@@ -175,6 +277,7 @@ def evaluate(individual):
         - W3 * station_count_penalty
         - W4 * linearity_score
         + W5 * population_score
+        + W6 * perp
     )
     fitness_cache[key] = fitness
     return (fitness,)
@@ -204,7 +307,8 @@ def calculate_population_in_radius(station_coords, population_raster, transform,
     radius_squared = radius_pixels**2
 
     population_within_radius = 0
-    visited = np.zeros((height, width), dtype=bool)  # Create a 2D array for visited pixels
+    # visited = np.zeros((height, width), dtype=bool)  # Create a 2D array for visited pixels
+    visited = np.copy(line1_visited)
 
     for station_pixel in station_pixel_coords:
         col, row = map(int, station_pixel)
@@ -226,6 +330,7 @@ def calculate_population_in_radius(station_coords, population_raster, transform,
     return population_within_radius
 
 
+
 # Custom Crossover Operator for Variable-Length Individuals
 def crossover_individuals(ind1, ind2):
     """
@@ -236,6 +341,8 @@ def crossover_individuals(ind1, ind2):
     common = list(set1 & set2)
     unique1 = list(set1 - set2)
     unique2 = list(set2 - set1)
+    unique1 = [x for x in unique1 if x not in line1]
+    unique2 = [x for x in unique2 if x not in line1]
 
     # Swap a random number of unique genes
     swap_size = min(len(unique1), len(unique2))
@@ -324,10 +431,13 @@ def main():
     best_individual = hof[0]
     print("Best Individual Fitness:", best_individual.fitness.values[0])
     print("Best Individual Stations Indices:", best_individual)
-    
-    stations = viable_grids.loc[best_individual]
-    coords = stations.geometry.centroid.apply(lambda point: (point.x, point.y)).tolist()
 
+    # Calculate Penalties for Loss Row
+    stations = viable_grids.loc[best_individual]
+    feasibility_scores = stations["Normalized Feasibility"].values
+    total_feasibility = feasibility_scores.sum() / N_DESIRED
+
+    coords = stations.geometry.centroid.apply(lambda point: (point.x, point.y)).tolist()
     X = np.array([c[0] for c in coords]).reshape(-1, 1)  # x-coordinates
     y = np.array([c[1] for c in coords])  # y-coordinates
     reg = LinearRegression().fit(X, y)
@@ -335,11 +445,6 @@ def main():
     linearity_score = 1 - r_squared  # Penalize deviation from perfect linearity
     print("Final Linearity:", r_squared)
 
-    # Calculate Penalties for Loss Row
-    stations = viable_grids.loc[best_individual]
-    feasibility_scores = stations["Normalized Feasibility"].values
-    total_feasibility = feasibility_scores.sum() / N_DESIRED
-    
     # Distance Penalty
     coords = stations.geometry.centroid.apply(lambda point: (point.x, point.y)).tolist()
     distance_penalty = 0.0
@@ -362,11 +467,12 @@ def main():
     total_loss = W2 * distance_penalty + W3 * station_count_penalty
     print(f"Loss Contribution: {total_loss:.4f}")
 
-    # Retrieve the Best Stations GeoDataFrame
+    # # Retrieve the Best Stations GeoDataFrame
+    # best_individual = best_individual + [item for item in line1 if item not in best_individual]
     best_stations = viable_grids.loc[best_individual]
 
     # Output Path for the Best Stations
-    output_fp = os.getcwd() + "/GISFiles/best stations.gpkg"
+    output_fp = os.getcwd() + "/GISFiles/best stations2.gpkg"
 
     # Create the Output Directory if It Doesn't Exist
     os.makedirs(os.path.dirname(output_fp), exist_ok=True)

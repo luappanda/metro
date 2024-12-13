@@ -62,7 +62,7 @@ max_population = population_gdf["POP20"].sum()
 N_MIN = 5                  # Minimum number of stations
 N_MAX = 10                # Maximum number of stations
 POPULATION_SIZE = 150      # Increased population size
-NUM_GENERATIONS = 600     # Increased number of generations
+NUM_GENERATIONS = 10     # Increased number of generations
 CX_PROB = 0.75              # Increased crossover probability
 MUT_PROB = 0.35             # Increased mutation probability
 SEED = 23                  # Random seed for reproducibility
@@ -338,10 +338,9 @@ def main():
     plt.title("Average Fitness per Generation for Line 1")
     plt.grid(True)
     plt.legend()
-    plt.show()
-
     output_chart_fp = "GISFiles/average_fitness_per_generation.png"
     plt.savefig(output_chart_fp)
+    plt.show()
 
     # Retrieve the Best Individual
     best_individual = hof[0]

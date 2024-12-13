@@ -380,10 +380,9 @@ def main():
     plt.title("Average Fitness per Generation in Line 3")
     plt.grid(True)
     plt.legend()
-    plt.show()
-
     output_chart_fp = "GISFiles/average_fitness_per_generation3.png"
     plt.savefig(output_chart_fp)
+    plt.show()
 
     # Retrieve the Best Individual
     best_individual = hof[0]

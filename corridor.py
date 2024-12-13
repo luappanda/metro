@@ -63,7 +63,7 @@ def process_rectangle(args):
             pixel_values = pixel_values[~np.isnan(pixel_values)]  # Remove NaNs
 
             # Get the sum of pixel values in the masked area (or other statistics if needed)
-            total_pixel_value = pixel_values.sum() / 10000
+            total_pixel_value = pixel_values.sum() / 100
         except:
             total_pixel_value = 0
     else:

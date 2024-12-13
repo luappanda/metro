@@ -55,6 +55,7 @@ cor2_gdf = cor2_gdf.to_crs(grid_gdf.crs)
 
 # Set the radius within which the feasibility should be set to 0
 FEASIBILITY_RADIUS = 0
+FEASIBILITY_RADIUS = 0
 
 # Load the stations and connections (lines between stations) data
 connections_filepath = os.getcwd() + "/GISFiles/connections.gpkg"  # Path to the connections file
@@ -102,7 +103,7 @@ max_population = population_gdf["POP20"].sum()
 N_MIN = 5                  # Minimum number of stations
 N_MAX = 10                # Maximum number of stations
 POPULATION_SIZE = 150      # Increased population size
-NUM_GENERATIONS = 400      # Increased number of generations
+NUM_GENERATIONS = 600      # Increased number of generations
 CX_PROB = 0.75              # Increased crossover probability
 MUT_PROB = 0.35             # Increased mutation probability
 SEED = 54                  # Random seed for reproducibility

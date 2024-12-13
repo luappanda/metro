@@ -57,7 +57,7 @@ gdf_population.plot(ax=ax, color='none', edgecolor='lightgray', linewidth=0.5)
 gdf_traffic.plot(ax=ax, column='year_2023', cmap=cmap, norm=norm, linewidth=2)
 
 # Create the colorbar axis with a fixed position
-cbar_ax = fig.add_axes([0.85, 0.15, 0.03, 0.7])  # Adjust position if necessary
+cbar_ax = fig.add_axes([0.90, 0.15, 0.03, 0.7])  # Adjust position if necessary
 
 # Manually set limits for the colorbar to avoid NaN or Inf issues
 colorbar = ColorbarBase(cbar_ax, cmap=cmap, norm=norm, orientation='vertical')

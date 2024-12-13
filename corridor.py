@@ -122,10 +122,10 @@ out_gdf.to_file(output_fp, driver="GPKG")
 
 
 # Optional: Visualize
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
-gdf.plot(color='blue', markersize=5, label='Points')
-gpd.GeoSeries([best_rect]).plot(ax=plt.gca(), edgecolor='red', alpha=0.5, label='Best Rectangle')
-plt.legend()
-plt.show()
+# gdf.plot(color='blue', markersize=5, label='Points')
+# gpd.GeoSeries([best_rect]).plot(ax=plt.gca(), edgecolor='red', alpha=0.5, label='Best Rectangle')
+# plt.legend()
+# plt.show()
 

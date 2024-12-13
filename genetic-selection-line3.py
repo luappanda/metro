@@ -126,8 +126,8 @@ ALPHA = 0.001              # Adjusted scaling factor for distance penalties
 BETA = 1.0                 # Adjusted scaling factor for number of stations penalty
 
 # 6. Initialize Random Seed
-random.seed(SEED)
-np.random.seed(SEED)
+# random.seed(SEED)
+# np.random.seed(SEED)
 
 # 7. Function to Select Initial Stations Based on Weighted Feasibility
 def init_individual():

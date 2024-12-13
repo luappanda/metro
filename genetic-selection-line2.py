@@ -103,7 +103,7 @@ max_population = population_gdf["POP20"].sum()
 N_MIN = 5                  # Minimum number of stations
 N_MAX = 10                # Maximum number of stations
 POPULATION_SIZE = 150      # Increased population size
-NUM_GENERATIONS = 600      # Increased number of generations
+NUM_GENERATIONS = 400      # Increased number of generations
 CX_PROB = 0.75              # Increased crossover probability
 MUT_PROB = 0.35             # Increased mutation probability
 SEED = 54                  # Random seed for reproducibility
@@ -145,11 +145,11 @@ viable_grids["Normalized Feasibility"] = (
 N_DESIRED = (N_MIN + N_MAX) // 2
 
 # Weights for the fitness function components
-W1 = 15.0  # Adjusted weight for feasibility score
-W2 = 10.0  # Increased weight for distance penalty
+W1 = 9.0  # Adjusted weight for feasibility score
+W2 = 3.0  # Increased weight for distance penalty
 W3 = 1.0  # Increased weight for station count penalty
-W4 = 20.0 # Weight for linearity
-W5 = 15.0 # Weight for population coverage
+W4 = 2 # Weight for linearity
+W5 = 10.0 # Weight for population coverage
 
 def evaluate(individual):
     """

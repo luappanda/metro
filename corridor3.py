@@ -14,14 +14,21 @@ import pandas as pd
 # Parameters
 width = 3000  # Rectangle width in meters (1 km)
 length = 25000  # Rectangle length in meters (example: 2 km)
-orientations = np.linspace(0, 180, num=10)  # Angles to test (in degrees)
+orientations = np.linspace(0, 180, num=20)  # Angles to test (in degrees)
 
 W1 = 1
-W2 = 1
+W2 = 100
 
 # Load Weighted Feasibilty Grid
 grid_filepath = os.getcwd() + "/GISFiles/weighted grid.gpkg"  # Update the path if necessary
 gdf = gpd.read_file(grid_filepath)
+
+# Load stations
+stations_filepath = os.getcwd() + "/GISFiles/best stations.gpkg"
+stations_gdf = gpd.read_file(stations_filepath)
+stations2_filepath = os.getcwd() + "/GISFiles/best stations2.gpkg"
+stations2_gdf = gpd.read_file(stations2_filepath)
+total_stations = pd.concat([stations_gdf, stations2_gdf]).drop_duplicates()
 
 # Load Corridor 1 Feasibilty Grid
 cor_filepath = os.getcwd() + "/GISFiles/corridor.gpkg"  # Update the path if necessary
@@ -45,6 +52,7 @@ raster = rasterio.open(raster_filepath)
 gdf = gdf.to_crs(raster.crs)  # Convert to a projected CRS (Web Mercator)
 cor1 = cor1.to_crs(raster.crs)
 cor2 = cor2.to_crs(raster.crs)
+total_stations = total_stations.to_crs(raster.crs)
 
 # Grid search for the best rectangle
 best_weight = -np.inf
@@ -54,6 +62,7 @@ best_orientation = None
 rect1=cor1.geometry.iloc[0]
 rect2=cor2.geometry.iloc[0]
 gdf['geometry'] = gdf.geometry.centroid
+total_stations['geometry'] = total_stations.geometry.centroid
 viable1=gdf[gdf["TOTAL WEIGHTED FEASIBILITY"] > 0.75].reset_index(drop=True)
 # viable = viable1[viable1.geometry.within(rect1)]
 # Spatial join: Find features in gdf1 that are within the polygon in gdf2
@@ -89,7 +98,7 @@ def process_rectangle(args):
         possible_matches = gdf.iloc[possible_matches_idx]
 
         # Calculate total weight within the rectangle
-        total_weight = possible_matches[possible_matches.geometry.within(non_overlap_rect)]['TOTAL WEIGHTED FEASIBILITY'].sum()
+        total_weight = possible_matches[possible_matches.geometry.within(non_overlap_rect)]['TOTAL WEIGHTED FEASIBILITY'].sum(0)
     else:
         total_weight=0
     
@@ -104,7 +113,7 @@ def process_rectangle(args):
             pixel_values = pixel_values[~np.isnan(pixel_values)]  # Remove NaNs
 
             # Get the sum of pixel values in the masked area (or other statistics if needed)
-            total_pixel_value = pixel_values.sum()
+            total_pixel_value = pixel_values.sum() / 100
         except:
             total_pixel_value = 0
     else:
@@ -114,7 +123,7 @@ def process_rectangle(args):
 
 
 # Prepare inputs for parallel processing
-args_list = [(point, angle) for point in viable.geometry for angle in orientations]
+args_list = [(point, angle) for point in total_stations.geometry for angle in orientations]
 
 # Use ProcessPoolExecutor for parallel processing
 print("Starting parallel computation...")

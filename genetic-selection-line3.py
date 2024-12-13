@@ -50,6 +50,10 @@ cor1_gdf = cor1_gdf.to_crs(grid_gdf.crs)
 cor2_filepath = os.getcwd() + "/GISFiles/corridor2.gpkg"
 cor2_gdf = gpd.read_file(cor2_filepath)
 cor2_gdf = cor2_gdf.to_crs(grid_gdf.crs)
+cor3_filepath = os.getcwd() + "/GISFiles/corridor3.gpkg"
+cor3_gdf = gpd.read_file(cor3_filepath)
+cor3_gdf = cor3_gdf.to_crs(grid_gdf.crs)
+
 
 
 
@@ -77,16 +81,20 @@ grid_gdf.to_file(output_filepath, driver="GPKG")
 # 2. Filter Viable Grids Based on Feasibility
 viable_grids = grid_gdf[grid_gdf["TOTAL WEIGHTED FEASIBILITY"] > 0].reset_index(drop=True)
 # print(viable_grids)
-viable_grids = viable_grids[viable_grids.geometry.intersects(cor2_gdf.geometry.iloc[0])]
+viable_grids = viable_grids[viable_grids.geometry.intersects(cor3_gdf.geometry.iloc[0])]
 
 
 # Load the selections from the first line.
 line1_filepath = os.getcwd() + "/GISFiles/best stations.gpkg"
 line1_gdf = gpd.read_file(line1_filepath)
-ids = line1_gdf["id"]
+line2_filepath = os.getcwd() + "/GISFiles/best stations2.gpkg"
+line2_gdf = gpd.read_file(line2_filepath)
 
-line1 = grid_gdf.loc[grid_gdf['id'].isin(ids)].index.tolist()
-overlap_stations = line1_gdf[line1_gdf.geometry.centroid.within(cor2_gdf.geometry.iloc[0])]
+
+
+overlap_stations1 = line1_gdf[line1_gdf.geometry.centroid.within(cor3_gdf.geometry.iloc[0])]
+overlap_stations2 = line2_gdf[line2_gdf.geometry.centroid.within(cor3_gdf.geometry.iloc[0])]
+overlap_stations = pd.concat([overlap_stations1, overlap_stations2])
 overlap_stations = overlap_stations.to_crs(raster_crs)
 overlap_count = len(overlap_stations)
 
@@ -277,8 +285,6 @@ def crossover_individuals(ind1, ind2):
     common = list(set1 & set2)
     unique1 = list(set1 - set2)
     unique2 = list(set2 - set1)
-    unique1 = [x for x in unique1 if x not in line1]
-    unique2 = [x for x in unique2 if x not in line1]
 
     # Swap a random number of unique genes
     swap_size = min(len(unique1), len(unique2))
@@ -409,7 +415,7 @@ def main():
     overlap_stations = overlap_stations.to_crs(best_stations.crs)
     best_stations = pd.concat([best_stations, overlap_stations], ignore_index=True)
     # Output Path for the Best Stations
-    output_fp = os.getcwd() + "/GISFiles/best stations2.gpkg"
+    output_fp = os.getcwd() + "/GISFiles/best stations3.gpkg"
 
     # Create the Output Directory if It Doesn't Exist
     os.makedirs(os.path.dirname(output_fp), exist_ok=True)

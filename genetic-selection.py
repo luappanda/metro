@@ -32,6 +32,11 @@ population_gdf = population_gdf[population_gdf.is_valid]
 if population_gdf.crs.is_geographic:
     population_gdf = population_gdf.to_crs("EPSG:3857")  # Use Web Mercator or appropriate CRS
 
+# Load the corridor
+cor_filepath = os.getcwd() + "/GISFiles/corridor.gpkg"
+cor_gdf = gpd.read_file(cor_filepath)
+cor_gdf = cor_gdf.to_crs(grid_gdf.crs)
+
 # Load the raster
 raster_filepath = os.getcwd() + "/GISFiles/output_population_raster2.tif"  # Update the path if necessary
 with rasterio.open(raster_filepath) as src:
@@ -44,7 +49,8 @@ with rasterio.open(raster_filepath) as src:
 
 # 2. Filter Viable Grids Based on Feasibility
 viable_grids = grid_gdf[grid_gdf["TOTAL WEIGHTED FEASIBILITY"] > 0].reset_index(drop=True)
-
+viable_grids = viable_grids[viable_grids.geometry.intersects(cor_gdf.geometry.iloc[0])]
+# print(viable_grids)
 # 3. Normalize Weights for Selection Probability
 weights = viable_grids["TOTAL WEIGHTED FEASIBILITY"].values
 weights_normalized = weights / weights.sum()
@@ -56,7 +62,7 @@ max_population = population_gdf["POP20"].sum()
 N_MIN = 5                  # Minimum number of stations
 N_MAX = 10                # Maximum number of stations
 POPULATION_SIZE = 150      # Increased population size
-NUM_GENERATIONS = 400     # Increased number of generations
+NUM_GENERATIONS = 600     # Increased number of generations
 CX_PROB = 0.75              # Increased crossover probability
 MUT_PROB = 0.35             # Increased mutation probability
 SEED = 23                  # Random seed for reproducibility
@@ -64,8 +70,8 @@ SEED = 23                  # Random seed for reproducibility
 # 5. Constraints and Penalties
 D_MIN = 1800              # Minimum distance between stations in meters
 D_MAX = 20000              # Maximum distance between stations in meters
-POPULATION_RADIUS = 4000 # Radius around each station to consider population
-MINIMUM__RSQUARED = 0.9  # Minimum R^2 value for the linear regression  
+POPULATION_RADIUS = 3000 # Radius around each station to consider population
+MINIMUM__RSQUARED = 0.85  # Minimum R^2 value for the linear regression  
 
 # Scaling factors for exponential penalties
 ALPHA = 0.001              # Adjusted scaling factor for distance penalties
@@ -99,7 +105,7 @@ N_DESIRED = (N_MIN + N_MAX) // 2
 W1 = 9.0  # Adjusted weight for feasibility score
 W2 = 3.0  # Increased weight for distance penalty
 W3 = 1.0  # Increased weight for station count penalty
-W4 = 15.0 # Weight for linearity
+W4 = 2 # Weight for linearity
 W5 = 10.0 # Weight for population coverage
 
 def evaluate(individual):

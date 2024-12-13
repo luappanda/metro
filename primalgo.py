@@ -6,16 +6,37 @@ import numpy as np
 from shapely.geometry import LineString
 
 stations = gpd.read_file("GISFiles/best stations.gpkg")
+stations2 = gpd.read_file("GISFiles/best stations2.gpkg")
+stations3 = gpd.read_file("GISFiles/best stations3.gpkg")
 connections = []
 minrow = min(stations["row_index"])
 mincol = min(stations["col_index"])
 points = list()
+minrow2 = min(stations2["row_index"])
+mincol2 = min(stations2["col_index"])
+points2 = list()
+minrow3 = min(stations3["row_index"])
+mincol3 = min(stations3["col_index"])
+points3 = list()
+
 
 # for idx in stations["row_index"]:
 for index in range(len(stations)):
     x=int(stations["col_index"][index]-mincol)
     y=int(stations["row_index"][index]-minrow)
     points.append((y, x))
+
+# for idx in stations["row_index"]:
+for index in range(len(stations2)):
+    x=int(stations2["col_index"][index]-mincol2)
+    y=int(stations2["row_index"][index]-minrow2)
+    points2.append((y, x))
+
+# for idx in stations["row_index"]:
+for index in range(len(stations3)):
+    x=int(stations3["col_index"][index]-mincol3)
+    y=int(stations3["row_index"][index]-minrow3)
+    points3.append((y, x))
 
 def distance(p1,p2):
     return math.sqrt((p2[0]-p1[0])**2+(p2[1]-p2[1])**2)
@@ -47,10 +68,24 @@ def prim_mst(vertices):
 
 # Run the algorithm
 mst = prim_mst(points)
+mst2 = prim_mst(points2)
+mst3 = prim_mst(points3)
 
 for edge in mst:
     beg_point = stations.geometry.iloc[edge[0]].centroid
     end_point = stations.geometry.iloc[edge[1]].centroid
+    line = LineString([beg_point, end_point])
+    connections.append(line)
+
+for edge in mst2:
+    beg_point = stations2.geometry.iloc[edge[0]].centroid
+    end_point = stations2.geometry.iloc[edge[1]].centroid
+    line = LineString([beg_point, end_point])
+    connections.append(line)
+
+for edge in mst3:
+    beg_point = stations3.geometry.iloc[edge[0]].centroid
+    end_point = stations3.geometry.iloc[edge[1]].centroid
     line = LineString([beg_point, end_point])
     connections.append(line)
 

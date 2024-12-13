@@ -13,7 +13,7 @@ from rasterio.mask import mask
 # Parameters
 width = 3000  # Rectangle width in meters (1 km)
 length = 25000  # Rectangle length in meters (example: 2 km)
-orientations = np.linspace(0, 180, num=10)  # Angles to test (in degrees)
+orientations = np.linspace(0, 180, num=20)  # Angles to test (in degrees)
 
 W1 = 1
 W2 = 1
@@ -21,6 +21,10 @@ W2 = 1
 # Load Weighted Feasibilty Grid
 grid_filepath = os.getcwd() + "/GISFiles/weighted grid.gpkg"  # Update the path if necessary
 gdf = gpd.read_file(grid_filepath)
+
+# Load stations
+stations_filepath = os.getcwd() + "/GISFiles/best stations.gpkg"
+stations_gdf = gpd.read_file(stations_filepath)
 
 # Load Weighted Feasibilty Grid
 cor_filepath = os.getcwd() + "/GISFiles/corridor.gpkg"  # Update the path if necessary
@@ -39,6 +43,7 @@ raster = rasterio.open(raster_filepath)
 # if gdf.crs.is_geographic:  # Check if in lat/lon
 gdf = gdf.to_crs(raster.crs)  # Convert to a projected CRS (Web Mercator)
 cor = cor.to_crs(raster.crs)
+stations_gdf = stations_gdf.to_crs(raster.crs)
 
 # Grid search for the best rectangle
 best_weight = -np.inf
@@ -51,6 +56,7 @@ viable1=gdf[gdf["TOTAL WEIGHTED FEASIBILITY"] > 0.75].reset_index(drop=True)
 viable = viable1[viable1.geometry.within(rect1)]
 
 
+stations_gdf['geometry'] = stations_gdf.geometry.centroid
 
 # Build a spatial index
 spatial_index = gdf.sindex
@@ -90,7 +96,7 @@ def process_rectangle(args):
             pixel_values = pixel_values[~np.isnan(pixel_values)]  # Remove NaNs
 
             # Get the sum of pixel values in the masked area (or other statistics if needed)
-            total_pixel_value = pixel_values.sum()
+            total_pixel_value = pixel_values.sum() / 100
         except:
             total_pixel_value = 0
     else:
@@ -100,7 +106,8 @@ def process_rectangle(args):
 
 
 # Prepare inputs for parallel processing
-args_list = [(point, angle) for point in viable.geometry for angle in orientations]
+# args_list = [(point, angle) for point in viable.geometry for angle in orientations]
+args_list = [(point, angle) for point in stations_gdf.geometry for angle in orientations]
 
 # Use ProcessPoolExecutor for parallel processing
 print("Starting parallel computation...")

@@ -5,12 +5,12 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
 # Define the file paths
-gpkg_stations1 = r'GISFiles/best stations4.gpkg'
-gpkg_stations2 = r'GISFiles/best stations2.gpkg'
-gpkg_stations3 = r'GISFiles/best stations3.gpkg'
-gpkg_line1 = r'GISFiles/connections1.gpkg'
-gpkg_line2 = r'GISFiles/connections2.gpkg'
-gpkg_line3 = r'GISFiles/connections3.gpkg'
+gpkg_stations1 = r'GISFiles/output/best stations4.gpkg'
+gpkg_stations2 = r'GISFiles/output/best stations2.gpkg'
+gpkg_stations3 = r'GISFiles/output/best stations3.gpkg'
+gpkg_line1 = r'GISFiles/output/connections1.gpkg'
+gpkg_line2 = r'GISFiles/output/connections2.gpkg'
+gpkg_line3 = r'GISFiles/output/connections3.gpkg'
 gpkg_population_path = r'GISFiles/block population.gpkg'
 
 # Load the GeoPackages
@@ -61,6 +61,6 @@ ax.set_ylabel('Latitude')
 ax.legend(handles=legend_handles, loc='upper right', title='Lines')
 
 # Save the plot
-output_path = r'GISFiles/lines.png'
+output_path = r'GISFiles/output/lines.png'
 plt.savefig(output_path, dpi=500, bbox_inches='tight')
-plt.show()
+# plt.show()

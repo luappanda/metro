@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
 # Define the file paths
-gpkg_corridor1_path = r'GISFiles/corridor.gpkg'
-gpkg_corridor2_path = r'GISFiles/corridor2.gpkg'
-gpkg_corridor3_path = r'GISFiles/corridor3.gpkg'
+gpkg_corridor1_path = r'GISFiles/output/corridor.gpkg'
+gpkg_corridor2_path = r'GISFiles/output/corridor2.gpkg'
+gpkg_corridor3_path = r'GISFiles/output/corridor3.gpkg'
 gpkg_population_path = r'GISFiles/block population.gpkg'
 
 # Load the GeoPackages
@@ -43,9 +43,9 @@ legend_handles = [
 ax.set_title('Corridors Generated for All Metro Lines', fontsize=16)
 ax.set_xlabel('Longitude')
 ax.set_ylabel('Latitude')
-ax.legend(handles=legend_handles, loc='upper right', title='Corridors')
+ax.legend(handles=legend_handles, loc='lower left', title='Corridors')
 
 # Save the plot
-output_path = r'GISFiles/corridors.png'
+output_path = r'GISFiles/output/corridors.png'
 plt.savefig(output_path, dpi=500, bbox_inches='tight')
-plt.show()
+# plt.show()

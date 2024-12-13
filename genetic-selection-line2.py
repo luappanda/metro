@@ -14,7 +14,7 @@ from shapely.geometry import Point
 from affine import Affine
 from joblib import Parallel, delayed
 import pandas as pd
-
+import json
 
 # ----------------------------------- #
 #       Genetic Algoritfhm Setup       #
@@ -44,17 +44,17 @@ with rasterio.open(raster_filepath) as src:
     resolution = transform[0]  # Get resolution (pixel size in meters)
 
 # Load the corridors
-cor1_filepath = os.getcwd() + "/GISFiles/corridor.gpkg"
+cor1_filepath = os.getcwd() + "/GISFiles/output/corridor.gpkg"
 cor1_gdf = gpd.read_file(cor1_filepath)
 cor1_gdf = cor1_gdf.to_crs(grid_gdf.crs)
-cor2_filepath = os.getcwd() + "/GISFiles/corridor2.gpkg"
+cor2_filepath = os.getcwd() + "/GISFiles/output/corridor2.gpkg"
 cor2_gdf = gpd.read_file(cor2_filepath)
 cor2_gdf = cor2_gdf.to_crs(grid_gdf.crs)
 
 
 
 # Set the radius within which the feasibility should be set to 0
-FEASIBILITY_RADIUS = 1800
+FEASIBILITY_RADIUS = 0
 
 # Load the stations and connections (lines between stations) data
 connections_filepath = os.getcwd() + "/GISFiles/connections.gpkg"  # Path to the connections file
@@ -81,7 +81,7 @@ viable_grids = viable_grids[viable_grids.geometry.intersects(cor2_gdf.geometry.i
 
 
 # Load the selections from the first line.
-line1_filepath = os.getcwd() + "/GISFiles/best stations4.gpkg"
+line1_filepath = os.getcwd() + "/GISFiles/output/best stations4.gpkg"
 line1_gdf = gpd.read_file(line1_filepath)
 ids = line1_gdf["id"]
 
@@ -109,9 +109,9 @@ SEED = 54                  # Random seed for reproducibility
 
 # 5. Constraints and Penalties
 D_MIN = 1800              # Minimum distance between stations in meters
-POPULATION_RADIUS = 4000
 D_MAX = 20000              # Maximum distance between stations in meters # Radius around each station to consider population
-MINIMUM__RSQUARED = 0.9  # Minimum R^2 value for the linear regression  
+POPULATION_RADIUS = 3000
+MINIMUM__RSQUARED = 0.85  # Minimum R^2 value for the linear regression  
 
 # Scaling factors for exponential penalties
 ALPHA = 0.001              # Adjusted scaling factor for distance penalties
@@ -364,20 +364,9 @@ def main():
     )
 
     avg = log.select("avg")
+    max = log.select("max")
     # Extract average fitness values per generation and generation numbers
-    gen = log.select("gen")  # Generations are simply indexed by the length of avg_fitness
-    print(str(avg))
-    print(str(gen))
-    # Plot the average fitness over generations
-    plt.plot(gen, avg, label='Average Fitness')
-    plt.xlabel("Generation")
-    plt.ylabel("Average Fitness")
-    plt.title("Average Fitness per Generation in Line 2")
-    plt.grid(True)
-    plt.legend()
-    output_chart_fp = "GISFiles/average_fitness_per_generation2.png"
-    plt.savefig(output_chart_fp)
-    plt.show()
+    # gen = log.select("gen")  # Generations are simply indexed by the length of avg_fitness
 
     # Retrieve the Best Individual
     best_individual = hof[0]
@@ -425,18 +414,37 @@ def main():
     global overlap_stations
     overlap_stations = overlap_stations.to_crs(best_stations.crs)
     best_stations = pd.concat([best_stations, overlap_stations], ignore_index=True)
+    
+    json_fp = os.getcwd() + "/GISFiles/output/fitness_data.json"
+
+    # Open and read the JSON file
+    with open(json_fp, 'r') as file:
+        data = json.load(file)
+    
+    data.update({"avg_fitness2":avg})
+    data.update({"max_fitness2":max})
+
     # Output Path for the Best Stations
-    output_fp = os.getcwd() + "/GISFiles/best stations2.gpkg"
+    output_fp = os.getcwd() + "/GISFiles/output/best stations2.gpkg"
+
+    # Output for fitness data
+    json_out_fp = os.getcwd() + "/GISFiles/output/fitness_data.json"
 
     # Create the Output Directory if It Doesn't Exist
     os.makedirs(os.path.dirname(output_fp), exist_ok=True)
+    # Create the Output Directory if It Doesn't Exist
+    os.makedirs(os.path.dirname(json_out_fp), exist_ok=True)
+
+    #Write to a JSON file
+    with open(json_out_fp, 'w') as json_file:
+        json.dump(data, json_file, indent=4)  # Use indent for pretty printing
 
     # Save the Best Stations to a GeoPackage
     best_stations.to_file(output_fp, driver="GPKG")
     print(f"Best stations saved to {output_fp}")
 
     # Optional: Visualize the Best Stations
-    visualize_results(viable_grids, best_stations)
+    # visualize_results(viable_grids, best_stations)
 
 # 11. Visualization Function (Optional)
 def visualize_results(all_grids, best_stations):

@@ -16,7 +16,7 @@ length = 25000  # Rectangle length in meters (example: 2 km)
 orientations = np.linspace(0, 180, num=10)  # Angles to test (in degrees)
 
 W1 = 1
-W2 = 1
+W2 = 5
 
 # Load Weighted Feasibilty Grid
 grid_filepath = os.getcwd() + "/GISFiles/weighted grid.gpkg"  # Update the path if necessary
@@ -95,6 +95,8 @@ if __name__ == '__main__':
     # Specify the CRS (e.g., EPSG:3857 for Web Mercator, change as per your data's CRS)
     out_gdf.set_crs(raster.crs, allow_override=True, inplace=True)
 
-    output_fp = os.getcwd() + "/GISFiles/corridor.gpkg"
+    output_fp = os.getcwd() + "/GISFiles/output/corridor.gpkg"
+    # Create the Output Directory if It Doesn't Exist
+    os.makedirs(os.path.dirname(output_fp), exist_ok=True)
     # Save the GeoDataFrame as a GeoPackage (.gpkg)
     out_gdf.to_file(output_fp, driver="GPKG")

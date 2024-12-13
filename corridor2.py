@@ -16,19 +16,21 @@ length = 25000  # Rectangle length in meters (example: 2 km)
 orientations = np.linspace(0, 180, num=20)  # Angles to test (in degrees)
 
 W1 = 1
-W2 = 1
+W2 = 5
 
 # Load Weighted Feasibilty Grid
 grid_filepath = os.getcwd() + "/GISFiles/weighted grid.gpkg"  # Update the path if necessary
 gdf = gpd.read_file(grid_filepath)
 
 # Load stations
-stations_filepath = os.getcwd() + "/GISFiles/best stations.gpkg"
+stations_filepath = os.getcwd() + "/GISFiles/output/best stations4.gpkg"
 stations_gdf = gpd.read_file(stations_filepath)
 
 # Load Weighted Feasibilty Grid
-cor_filepath = os.getcwd() + "/GISFiles/corridor.gpkg"  # Update the path if necessary
+cor_filepath = os.getcwd() + "/GISFiles/output/corridor.gpkg"  # Update the path if necessary
 cor = gpd.read_file(cor_filepath)
+
+
 
 # Load raster file (assuming it's a GeoTIFF)
 raster_filepath = os.getcwd() + "/GISFiles/output_population_raster2.tif"
@@ -130,17 +132,19 @@ if __name__ == '__main__':
     # Specify the CRS (e.g., EPSG:3857 for Web Mercator, change as per your data's CRS)
     out_gdf.set_crs(raster.crs, allow_override=True, inplace=True)
 
-    output_fp = os.getcwd() + "/GISFiles/corridor2.gpkg"
+    output_fp = os.getcwd() + "/GISFiles/output/corridor2.gpkg"
+    # Create the Output Directory if It Doesn't Exist
+    os.makedirs(os.path.dirname(output_fp), exist_ok=True)
     # Save the GeoDataFrame as a GeoPackage (.gpkg)
     out_gdf.to_file(output_fp, driver="GPKG")
 
 
 
-    # Optional: Visualize
-    import matplotlib.pyplot as plt
+    # # Optional: Visualize
+    # import matplotlib.pyplot as plt
 
-    gdf.plot(color='blue', markersize=5, label='Points')
-    gpd.GeoSeries([best_rect]).plot(ax=plt.gca(), edgecolor='red', alpha=0.5, label='Best Rectangle')
-    plt.legend()
-    plt.show()
+    # gdf.plot(color='blue', markersize=5, label='Points')
+    # gpd.GeoSeries([best_rect]).plot(ax=plt.gca(), edgecolor='red', alpha=0.5, label='Best Rectangle')
+    # plt.legend()
+    # plt.show()
 

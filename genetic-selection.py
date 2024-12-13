@@ -13,6 +13,7 @@ from rasterio.plot import show
 from shapely.geometry import Point
 from affine import Affine
 from joblib import Parallel, delayed
+import json
 
 
 # ----------------------------------- #
@@ -33,7 +34,7 @@ if population_gdf.crs.is_geographic:
     population_gdf = population_gdf.to_crs("EPSG:3857")  # Use Web Mercator or appropriate CRS
 
 # Load the corridor
-cor_filepath = os.getcwd() + "/GISFiles/corridor.gpkg"
+cor_filepath = os.getcwd() + "/GISFiles/output/corridor.gpkg"
 cor_gdf = gpd.read_file(cor_filepath)
 cor_gdf = cor_gdf.to_crs(grid_gdf.crs)
 
@@ -328,20 +329,26 @@ def main():
     )
 
     avg = log.select("avg")
+    max = log.select("max")
     # Extract average fitness values per generation and generation numbers
     gen = log.select("gen")  # Generations are simply indexed by the length of avg_fitness
-    print(str(avg))
-    print(str(gen))
-    # Plot the average fitness over generations
-    plt.plot(gen, avg, label='Average Fitness')
-    plt.xlabel("Generation")
-    plt.ylabel("Average Fitness")
-    plt.title("Average Fitness per Generation for Line 1")
-    plt.grid(True)
-    plt.legend()
-    output_chart_fp = "GISFiles/average_fitness_per_generation.png"
-    plt.savefig(output_chart_fp)
-    plt.show()
+    
+    data = {
+        "generations": gen,
+        "avg_fitness": avg,
+        "max_fitness": max
+    }
+    
+    # # Plot the average fitness over generations
+    # plt.plot(gen, max, label='Average Fitness')
+    # plt.xlabel("Generation")
+    # plt.ylabel("Average Fitness")
+    # plt.title("Average Fitness per Generation for Line 1")
+    # plt.grid(True)
+    # plt.legend()
+    # output_chart_fp = "GISFiles/average_fitness_per_generation.png"
+    # plt.savefig(output_chart_fp)
+    # plt.show()
 
     # Retrieve the Best Individual
     best_individual = hof[0]
@@ -389,17 +396,25 @@ def main():
     best_stations = viable_grids.loc[best_individual]
 
     # Output Path for the Best Stations
-    output_fp = os.getcwd() + "/GISFiles/best stations4.gpkg"
+    output_fp = os.getcwd() + "/GISFiles/output/best stations4.gpkg"
+    # Output for fitness data
+    json_out_fp = os.getcwd() + "/GISFiles/output/fitness_data.json"
 
     # Create the Output Directory if It Doesn't Exist
     os.makedirs(os.path.dirname(output_fp), exist_ok=True)
+    # Create the Output Directory if It Doesn't Exist
+    os.makedirs(os.path.dirname(json_out_fp), exist_ok=True)
 
     # Save the Best Stations to a GeoPackage
     best_stations.to_file(output_fp, driver="GPKG")
     print(f"Best stations saved to {output_fp}")
 
-    # Optional: Visualize the Best Stations
-    visualize_results(viable_grids, best_stations)
+    # Write to a JSON file
+    with open(json_out_fp, 'w') as json_file:
+        json.dump(data, json_file, indent=4)  # Use indent for pretty printing
+
+    # # Optional: Visualize the Best Stations
+    # visualize_results(viable_grids, best_stations)
 
 # 11. Visualization Function (Optional)
 def visualize_results(all_grids, best_stations):

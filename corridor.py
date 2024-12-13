@@ -82,14 +82,14 @@ print(f"Best Rectangle Geometry: {best_rect}")
 
 
 # Convert the placed rectangle to a GeoDataFrame
-gdf = gpd.GeoDataFrame({'geometry': [best_rect]})
+out_gdf = gpd.GeoDataFrame({'geometry': [best_rect]})
 
 # Specify the CRS (e.g., EPSG:3857 for Web Mercator, change as per your data's CRS)
-gdf.set_crs("EPSG:3857", allow_override=True, inplace=True)
+out_gdf.set_crs("EPSG:3857", allow_override=True, inplace=True)
 
 output_fp = os.getcwd() + "/GISFiles/corridor.gpkg"
 # Save the GeoDataFrame as a GeoPackage (.gpkg)
-gdf.to_file(output_fp, driver="GPKG")
+out_gdf.to_file(output_fp, driver="GPKG")
 
 
 

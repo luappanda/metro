@@ -4,16 +4,11 @@ import random
 import math
 import numpy as np
 from shapely.geometry import LineString
-stations = gpd.read_file("GISFiles/selection.gpkg")
+
+stations = gpd.read_file("GISFiles/best stations.gpkg")
 connections = []
-# print(stations)
-
-
-
-
 minrow = min(stations["row_index"])
 mincol = min(stations["col_index"])
-
 points = list()
 
 # for idx in stations["row_index"]:

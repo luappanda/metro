@@ -34,12 +34,18 @@ fig, ax = plt.subplots(1, 1, figsize=(10, 8))
 gdf_population.plot(ax=ax, color='none', edgecolor='lightgray', linewidth=0.5)
 
 # Plot the traffic data on top
-gdf_stations1.plot(ax=ax, color='green', edgecolor='black', linewidth=0.5)
-gdf_stations2.plot(ax=ax, color='blue', edgecolor='black', linewidth=0.5)
-gdf_stations3.plot(ax=ax, color='red', edgecolor='black', linewidth=0.5)
-gdf_line1.plot(ax=ax, color='green', linewidth=2)
-gdf_line2.plot(ax=ax, color='blue', linewidth=2)
-gdf_line3.plot(ax=ax, color='red', linewidth=2)
+scaled_stations1 = gdf_stations1.copy()
+scaled_stations1['geometry'] = scaled_stations1['geometry'].scale(xfact=5, yfact=5, origin='center')
+scaled_stations2 = gdf_stations2.copy()
+scaled_stations2['geometry'] = scaled_stations2['geometry'].scale(xfact=5, yfact=5, origin='center')
+scaled_stations3 = gdf_stations3.copy()
+scaled_stations3['geometry'] = scaled_stations3['geometry'].scale(xfact=5, yfact=5, origin='center')
+scaled_stations1.plot(ax=ax, color='green', edgecolor='black', linewidth=1, zorder=5)
+scaled_stations2.plot(ax=ax, color='blue', edgecolor='black', linewidth=1, zorder=5)
+scaled_stations3.plot(ax=ax, color='red', edgecolor='black', linewidth=1, zorder=5)
+gdf_line1.plot(ax=ax, color='green', linewidth=5)
+gdf_line2.plot(ax=ax, color='blue', linewidth=5)
+gdf_line3.plot(ax=ax, color='red', linewidth=5)
 
 # Create custom legend handles
 legend_handles = [

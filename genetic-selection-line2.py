@@ -81,7 +81,7 @@ viable_grids = viable_grids[viable_grids.geometry.intersects(cor2_gdf.geometry.i
 
 
 # Load the selections from the first line.
-line1_filepath = os.getcwd() + "/GISFiles/best stations.gpkg"
+line1_filepath = os.getcwd() + "/GISFiles/best stations4.gpkg"
 line1_gdf = gpd.read_file(line1_filepath)
 ids = line1_gdf["id"]
 
@@ -366,7 +366,8 @@ def main():
     avg = log.select("avg")
     # Extract average fitness values per generation and generation numbers
     gen = log.select("gen")  # Generations are simply indexed by the length of avg_fitness
-
+    print(str(avg))
+    print(str(gen))
     # Plot the average fitness over generations
     plt.plot(gen, avg, label='Average Fitness')
     plt.xlabel("Generation")

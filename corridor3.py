@@ -121,42 +121,42 @@ def process_rectangle(args):
 
     return total_weight*W1 + total_pixel_value*W2, placed_rect, angle
 
+if __name__ == '__main__':
+    # Prepare inputs for parallel processing
+    args_list = [(point, angle) for point in total_stations.geometry for angle in orientations]
 
-# Prepare inputs for parallel processing
-args_list = [(point, angle) for point in total_stations.geometry for angle in orientations]
+    # Use ProcessPoolExecutor for parallel processing
+    print("Starting parallel computation...")
+    with ProcessPoolExecutor() as executor:
+        results = list(tqdm(executor.map(process_rectangle, args_list), total=len(args_list)))
 
-# Use ProcessPoolExecutor for parallel processing
-print("Starting parallel computation...")
-with ProcessPoolExecutor() as executor:
-    results = list(tqdm(executor.map(process_rectangle, args_list), total=len(args_list)))
+    # Find the best result
+    best_weight, best_rect, best_orientation = max(results, key=lambda x: x[0])
 
-# Find the best result
-best_weight, best_rect, best_orientation = max(results, key=lambda x: x[0])
-
-# Output results
-print(f"Best Weight: {best_weight}")
-print(f"Best Orientation: {best_orientation}")
-print(f"Best Rectangle Geometry: {best_rect}")
-
-
-
-# Convert the placed rectangle to a GeoDataFrame
-out_gdf = gpd.GeoDataFrame({'geometry': [best_rect]})
-
-# Specify the CRS (e.g., EPSG:3857 for Web Mercator, change as per your data's CRS)
-out_gdf.set_crs(raster.crs, allow_override=True, inplace=True)
-
-output_fp = os.getcwd() + "/GISFiles/corridor3.gpkg"
-# Save the GeoDataFrame as a GeoPackage (.gpkg)
-out_gdf.to_file(output_fp, driver="GPKG")
+    # Output results
+    print(f"Best Weight: {best_weight}")
+    print(f"Best Orientation: {best_orientation}")
+    print(f"Best Rectangle Geometry: {best_rect}")
 
 
 
-# Optional: Visualize
-import matplotlib.pyplot as plt
+    # Convert the placed rectangle to a GeoDataFrame
+    out_gdf = gpd.GeoDataFrame({'geometry': [best_rect]})
 
-gdf.plot(color='blue', markersize=5, label='Points')
-gpd.GeoSeries([best_rect]).plot(ax=plt.gca(), edgecolor='red', alpha=0.5, label='Best Rectangle')
-plt.legend()
-plt.show()
+    # Specify the CRS (e.g., EPSG:3857 for Web Mercator, change as per your data's CRS)
+    out_gdf.set_crs(raster.crs, allow_override=True, inplace=True)
+
+    output_fp = os.getcwd() + "/GISFiles/corridor3.gpkg"
+    # Save the GeoDataFrame as a GeoPackage (.gpkg)
+    out_gdf.to_file(output_fp, driver="GPKG")
+
+
+
+    # Optional: Visualize
+    import matplotlib.pyplot as plt
+
+    gdf.plot(color='blue', markersize=5, label='Points')
+    gpd.GeoSeries([best_rect]).plot(ax=plt.gca(), edgecolor='red', alpha=0.5, label='Best Rectangle')
+    plt.legend()
+    plt.show()
 

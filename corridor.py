@@ -16,7 +16,7 @@ length = 25000  # Rectangle length in meters (example: 2 km)
 orientations = np.linspace(0, 180, num=10)  # Angles to test (in degrees)
 
 W1 = 1
-W2 = 1
+W2 = 5
 
 # Load Weighted Feasibilty Grid
 grid_filepath = os.getcwd() + "/GISFiles/weighted grid.gpkg"  # Update the path if necessary
@@ -63,7 +63,7 @@ def process_rectangle(args):
             pixel_values = pixel_values[~np.isnan(pixel_values)]  # Remove NaNs
 
             # Get the sum of pixel values in the masked area (or other statistics if needed)
-            total_pixel_value = pixel_values.sum() / 10000
+            total_pixel_value = pixel_values.sum() / 100
         except:
             total_pixel_value = 0
     else:

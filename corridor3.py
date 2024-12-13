@@ -17,7 +17,7 @@ length = 25000  # Rectangle length in meters (example: 2 km)
 orientations = np.linspace(0, 180, num=20)  # Angles to test (in degrees)
 
 W1 = 1
-W2 = 100
+W2 = 5
 
 # Load Weighted Feasibilty Grid
 grid_filepath = os.getcwd() + "/GISFiles/weighted grid.gpkg"  # Update the path if necessary

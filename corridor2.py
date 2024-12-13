@@ -16,14 +16,14 @@ length = 25000  # Rectangle length in meters (example: 2 km)
 orientations = np.linspace(0, 180, num=20)  # Angles to test (in degrees)
 
 W1 = 1
-W2 = 1
+W2 = 5
 
 # Load Weighted Feasibilty Grid
 grid_filepath = os.getcwd() + "/GISFiles/weighted grid.gpkg"  # Update the path if necessary
 gdf = gpd.read_file(grid_filepath)
 
 # Load stations
-stations_filepath = os.getcwd() + "/GISFiles/best stations.gpkg"
+stations_filepath = os.getcwd() + "/GISFiles/best stations4.gpkg"
 stations_gdf = gpd.read_file(stations_filepath)
 
 # Load Weighted Feasibilty Grid

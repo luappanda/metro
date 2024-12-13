@@ -110,7 +110,7 @@ max_population = population_gdf["POP20"].sum()
 N_MIN = 5                  # Minimum number of stations
 N_MAX = 10                # Maximum number of stations
 POPULATION_SIZE = 150      # Increased population size
-NUM_GENERATIONS = 200      # Increased number of generations
+NUM_GENERATIONS = 400      # Increased number of generations
 CX_PROB = 0.75              # Increased crossover probability
 MUT_PROB = 0.35             # Increased mutation probability
 SEED = 54                  # Random seed for reproducibility
@@ -355,9 +355,10 @@ def main():
 
     # Hall of Fame to Store the Best Individuals
     hof = tools.HallOfFame(1)
+    log = tools.Logbook()
 
     # Genetic Algorithm Parameters
-    algorithms.eaSimple(
+    population, log = algorithms.eaSimple(
         population,
         toolbox,
         cxpb=CX_PROB,
@@ -367,6 +368,22 @@ def main():
         halloffame=hof,
         verbose=True
     )
+
+    avg = log.select("avg")
+    # Extract average fitness values per generation and generation numbers
+    gen = log.select("gen")  # Generations are simply indexed by the length of avg_fitness
+
+    # Plot the average fitness over generations
+    plt.plot(gen, avg, label='Average Fitness')
+    plt.xlabel("Generation")
+    plt.ylabel("Average Fitness")
+    plt.title("Average Fitness per Generation in Line 3")
+    plt.grid(True)
+    plt.legend()
+    plt.show()
+
+    output_chart_fp = "GISFiles/average_fitness_per_generation3.png"
+    plt.savefig(output_chart_fp)
 
     # Retrieve the Best Individual
     best_individual = hof[0]

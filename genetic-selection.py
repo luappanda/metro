@@ -313,9 +313,10 @@ def main():
 
     # Hall of Fame to Store the Best Individuals
     hof = tools.HallOfFame(1)
+    log = tools.Logbook()
 
     # Genetic Algorithm Parameters
-    algorithms.eaSimple(
+    population, log = algorithms.eaSimple(
         population,
         toolbox,
         cxpb=CX_PROB,
@@ -325,6 +326,22 @@ def main():
         halloffame=hof,
         verbose=True
     )
+
+    avg = log.select("avg")
+    # Extract average fitness values per generation and generation numbers
+    gen = log.select("gen")  # Generations are simply indexed by the length of avg_fitness
+
+    # Plot the average fitness over generations
+    plt.plot(gen, avg, label='Average Fitness')
+    plt.xlabel("Generation")
+    plt.ylabel("Average Fitness")
+    plt.title("Average Fitness per Generation for Line 1")
+    plt.grid(True)
+    plt.legend()
+    plt.show()
+
+    output_chart_fp = "GISFiles/average_fitness_per_generation.png"
+    plt.savefig(output_chart_fp)
 
     # Retrieve the Best Individual
     best_individual = hof[0]
@@ -372,7 +389,7 @@ def main():
     best_stations = viable_grids.loc[best_individual]
 
     # Output Path for the Best Stations
-    output_fp = os.getcwd() + "/GISFiles/best stations.gpkg"
+    output_fp = os.getcwd() + "/GISFiles/best stations4.gpkg"
 
     # Create the Output Directory if It Doesn't Exist
     os.makedirs(os.path.dirname(output_fp), exist_ok=True)

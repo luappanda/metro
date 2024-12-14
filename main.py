@@ -26,30 +26,30 @@ runs = 10
 
 total_time=0
 
-# for x in range(runs):
-#     os.makedirs((out_folder), exist_ok=True)
-#     dir = os.listdir(out_folder)
-#     if len(dir) > 0:
-#         print('Please clear output directories')
-#         exit()
-#     start = time.time()
-#     subprocess.run(["python", "corridor.py"])
-#     subprocess.run(["python", "genetic-selection.py"])
-#     subprocess.run(["python", "corridor2.py"])
-#     subprocess.run(["python", "genetic-selection-line2.py"])
-#     subprocess.run(["python", "corridor3.py"])
-#     subprocess.run(["python", "genetic-selection-line3.py"])
-#     subprocess.run(["python", "fitness-graph.py"])
-#     subprocess.run(["python", "linealgo.py"])
-#     subprocess.run(["python", "make-corridor-plot.py"])
-#     subprocess.run(["python", "make-lines-plot.py"])
-#     end = time.time()
-#     elapsed_time = int(end-start)
-#     estimated_time = elapsed_time*(runs-1-x)
-#     total_time+=elapsed_time
-#     print(f"{YELLOW}Elapsed Time: {str(timedelta(seconds=total_time))}")
-#     print(f"{YELLOW}Estimated remaining Time: {str(timedelta(seconds=estimated_time))}{RESET}")
-#     os.rename(out_folder, out_folder+str(x+1))
+for x in range(runs):
+    os.makedirs((out_folder), exist_ok=True)
+    dir = os.listdir(out_folder)
+    if len(dir) > 0:
+        print('Please clear output directories')
+        exit()
+    start = time.time()
+    subprocess.run(["python", "corridor.py"])
+    subprocess.run(["python", "genetic-selection.py"])
+    subprocess.run(["python", "corridor2.py"])
+    subprocess.run(["python", "genetic-selection-line2.py"])
+    subprocess.run(["python", "corridor3.py"])
+    subprocess.run(["python", "genetic-selection-line3.py"])
+    subprocess.run(["python", "fitness-graph.py"])
+    subprocess.run(["python", "linealgo.py"])
+    subprocess.run(["python", "make-corridor-plot.py"])
+    subprocess.run(["python", "make-lines-plot.py"])
+    end = time.time()
+    elapsed_time = int(end-start)
+    estimated_time = elapsed_time*(runs-1-x)
+    total_time+=elapsed_time
+    print(f"{YELLOW}Elapsed Time: {str(timedelta(seconds=total_time))}")
+    print(f"{YELLOW}Estimated remaining Time: {str(timedelta(seconds=estimated_time))}{RESET}")
+    os.rename(out_folder, out_folder+str(x+1))
 
 
 
@@ -83,7 +83,7 @@ N_MIN = 5                  # Minimum number of stations
 N_MAX = 10                # Maximum number of stations
 D_MIN = 1800              # Minimum distance between stations in meters
 D_MAX = 20000              # Maximum distance between stations in meters
-POPULATION_RADIUS = 3000 # Radius around each station to consider population
+POPULATION_RADIUS = 1800 # Radius around each station to consider population
 MINIMUM__RSQUARED = 0.85  # Minimum R^2 value for the linear regression 
 # Scaling factors for exponential penalties
 ALPHA = 0.001              # Adjusted scaling factor for distance penalties
@@ -157,7 +157,7 @@ def evaluate(individual):
         - W3 * station_count_penalty
         + W5 * population_score
     )
-    return (fitness, covered_population)
+    return (fitness, covered_population, distance_penalty, total_feasibility)
 
 
 best_fitness = -np.inf
@@ -234,9 +234,9 @@ for i in range(runs):
 
     ids = total_stations["id"]
     stations = viable_grids.loc[viable_grids['id'].isin(ids)]
-    fitness, covered_population = evaluate(stations) 
+    fitness, covered_population, distance_penalty, total_feasibility= evaluate(stations) 
     fitness += W4 * linearity
-    print(i+1, fitness, covered_population)
+    print(i+1, fitness, covered_population, distance_penalty, total_feasibility)
     if fitness > best_fitness:
         best_fitness = fitness
         best_layout = i+1

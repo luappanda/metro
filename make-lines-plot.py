@@ -22,9 +22,18 @@ gdf_line2 = gpd.read_file(gpkg_line2)
 gdf_line3 = gpd.read_file(gpkg_line3)
 gdf_population = gpd.read_file(gpkg_population_path)
 
-# Ensure both datasets are in the same CRS
-if gdf_stations1.crs != gdf_population.crs:
-    gdf_population = gdf_population.to_crs(gdf_stations1.crs)
+# print(gdf_population.crs)
+
+# Reproject all data to WGS84 (latitude/longitude)
+wgs84_crs = "EPSG:4326"
+gdf_stations1 = gdf_stations1.to_crs(wgs84_crs)
+gdf_stations2 = gdf_stations2.to_crs(wgs84_crs)
+gdf_stations3 = gdf_stations3.to_crs(wgs84_crs)
+gdf_line1 = gdf_line1.to_crs(wgs84_crs)
+gdf_line2 = gdf_line2.to_crs(wgs84_crs)
+gdf_line3 = gdf_line3.to_crs(wgs84_crs)
+gdf_population = gdf_population.to_crs(wgs84_crs)
+
 
 # Plotting
 fig, ax = plt.subplots(1, 1, figsize=(10, 8))
@@ -58,7 +67,7 @@ legend_handles = [
 ax.set_title('All Metro Lines', fontsize=16)
 ax.set_xlabel('Longitude')
 ax.set_ylabel('Latitude')
-ax.legend(handles=legend_handles, loc='upper right', title='Lines')
+ax.legend(handles=legend_handles, loc='lower left', title='Lines')
 
 # Save the plot
 output_path = r'GISFiles/output/lines.png'

@@ -16,9 +16,11 @@ gdf_corridor2 = gpd.read_file(gpkg_corridor2_path)
 gdf_corridor3 = gpd.read_file(gpkg_corridor3_path)
 gdf_population = gpd.read_file(gpkg_population_path)
 
-# Ensure both datasets are in the same CRS
-if gdf_corridor1.crs != gdf_population.crs:
-    gdf_population = gdf_population.to_crs(gdf_corridor1.crs)
+wgs84_crs = "EPSG:4326"
+gdf_corridor1 = gdf_corridor1.to_crs(wgs84_crs)
+gdf_corridor2 = gdf_corridor2.to_crs(wgs84_crs)
+gdf_corridor3 = gdf_corridor3.to_crs(wgs84_crs)
+gdf_population = gdf_population.to_crs(wgs84_crs)
 
 # Plotting
 fig, ax = plt.subplots(1, 1, figsize=(10, 8))

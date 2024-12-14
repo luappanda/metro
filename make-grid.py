@@ -20,9 +20,9 @@ if not os.path.exists(gpkg_population_path):
 gdf_traffic = gpd.read_file(gpkg_traffic_path)
 gdf_population = gpd.read_file(gpkg_population_path)
 
-# Ensure both datasets are in the same CRS
-if gdf_traffic.crs != gdf_population.crs:
-    gdf_population = gdf_population.to_crs(gdf_traffic.crs)
+wgs84_crs = "EPSG:4326"
+gdf_traffic = gdf_traffic.to_crs(wgs84_crs)
+gdf_population = gdf_population.to_crs(wgs84_crs)
 
 # Check if 'year_2023' column exists and remove NaN or Inf values
 if 'year_2023' not in gdf_traffic.columns:
